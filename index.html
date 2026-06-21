@@ -1,0 +1,2195 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Beer Diary - ปฏิทินและบันทึกข้อมูลเบียร์ส่วนตัว</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20viewBox%3D%270%200%20100%20100%27%3E%3Cdefs%3E%3ClinearGradient%20id%3D%27g%27%20x1%3D%270%27%20y1%3D%270%27%20x2%3D%270%27%20y2%3D%271%27%3E%3Cstop%20offset%3D%270%25%27%20stop-color%3D%27%23fde68a%27/%3E%3Cstop%20offset%3D%27100%25%27%20stop-color%3D%27%23d97706%27/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect%20width%3D%27100%27%20height%3D%27100%27%20rx%3D%2722%27%20fill%3D%27%230b0b0c%27/%3E%3Cpath%20d%3D%27M70%2036%20q20%200%2020%2017%20q0%2017%20-20%2017%27%20fill%3D%27none%27%20stroke%3D%27%2394a3b8%27%20stroke-width%3D%276%27%20stroke-linecap%3D%27round%27/%3E%3Cpath%20d%3D%27M21%2027%20H71%20L65%2083%20a7%207%200%200%201%20-7%206%20H35%20a7%207%200%200%201%20-7%20-6%20Z%27%20fill%3D%27%2364748b%27%20fill-opacity%3D%270.3%27%20stroke%3D%27%2394a3b8%27%20stroke-width%3D%272.5%27/%3E%3Cpath%20d%3D%27M25.5%2038%20H66.5%20L61.5%2080%20a4.5%204.5%200%200%201%20-4.5%204%20H35%20a4.5%204.5%200%200%201%20-4.5%20-4%20Z%27%20fill%3D%27url%28%23g%29%27/%3E%3Cpath%20d%3D%27M19%2026%20q2%20-9%209%20-7%20q2%20-8%2010%20-5%20q3%20-7%2011%20-3%20q4%20-6%2011%20-1%20q6%20-5%2010%202%20q4%204%200%209%20q-1%202%20-4%202%20H23%20q-4%20-1%20-4%20-3%20q0%20-1%200%20-2%20Z%27%20fill%3D%27%23fffbeb%27/%3E%3C/svg%3E">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Anuphan:wght@300;400;500;600;700&family=Prompt:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Anuphan', 'sans-serif'],
+                        title: ['Prompt', 'sans-serif'],
+                    },
+                    colors: {
+                        amber: {
+                            50: '#fffbeb', 100: '#fef3c7', 200: '#fde68a', 300: '#fcd34d',
+                            400: '#fbbf24', 500: '#f59e0b', 600: '#d97706', 700: '#b45309',
+                            800: '#92400e', 900: '#78350f', 950: '#451a03',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #0b0b0c; color: #f3f4f6; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #121214; }
+        ::-webkit-scrollbar-thumb { background: #27272a; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #d97706; }
+
+        /* การโฟกัสด้วยคีย์บอร์ดที่มองเห็นได้ชัดเจน (Accessibility) */
+        :focus-visible {
+            outline: 2px solid #38bdf8;
+            outline-offset: 2px;
+            border-radius: 6px;
+        }
+        
+        /* สไตล์พิเศษสำหรับช่องวันที่ในปฏิทิน */
+        .calendar-day {
+            aspect-ratio: 1.2 / 1;
+            transition: all 0.2s ease;
+        }
+
+        /* ===== ไอคอนเบียร์ทรงพรีเมียม (Steel x Amber) ===== */
+        .beer-icon-glow { filter: drop-shadow(0 0 10px rgba(217,119,6,0.35)); }
+        .beer-icon-sparkle { animation: sparkleTwinkle 2.4s ease-in-out infinite; transform-origin: center; }
+        @keyframes sparkleTwinkle {
+            0%, 100% { opacity: 0.35; transform: scale(0.85); }
+            50% { opacity: 1; transform: scale(1.05); }
+        }
+
+        /* ===== Boot / Splash screen สไตล์ระบบปฏิบัติการ ===== */
+        #bootScreen {
+            position: fixed; inset: 0; z-index: 100;
+            background: radial-gradient(circle at 50% 38%, #15151a 0%, #0b0b0c 70%);
+            display: flex; align-items: center; justify-content: center;
+            transition: opacity 0.5s ease;
+        }
+        #bootScreen.boot-fade-out { opacity: 0; pointer-events: none; }
+        .boot-emblem {
+            animation: bootPulse 1.8s ease-in-out infinite;
+        }
+        @keyframes bootPulse {
+            0%, 100% { filter: drop-shadow(0 0 14px rgba(56,189,248,0.25)) drop-shadow(0 0 6px rgba(217,119,6,0.3)); }
+            50% { filter: drop-shadow(0 0 26px rgba(56,189,248,0.45)) drop-shadow(0 0 14px rgba(217,119,6,0.5)); }
+        }
+        .boot-progress-track { width: 220px; height: 3px; background: #1f1f23; border-radius: 999px; overflow: hidden; }
+        .boot-progress-fill {
+            height: 100%; width: 0%; border-radius: 999px;
+            background: linear-gradient(90deg, #38bdf8, #f59e0b);
+            transition: width 1.4s cubic-bezier(0.45, 0, 0.2, 1);
+        }
+        .boot-log-line {
+            opacity: 0; transform: translateY(2px);
+            animation: bootLineIn 0.35s ease forwards;
+        }
+        @keyframes bootLineIn {
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .status-dot {
+            box-shadow: 0 0 0 0 rgba(52,211,153,0.6);
+            animation: statusPulse 2s infinite;
+        }
+        @keyframes statusPulse {
+            0% { box-shadow: 0 0 0 0 rgba(52,211,153,0.55); }
+            70% { box-shadow: 0 0 0 6px rgba(52,211,153,0); }
+            100% { box-shadow: 0 0 0 0 rgba(52,211,153,0); }
+        }
+
+
+        /* ===== รูปภาพ: แสดงเต็มรูป ไม่ครอป และให้กรอบพอดีกับรูปมากขึ้น ===== */
+        .beer-img-frame {
+            background: #09090b;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        .beer-card-img {
+            width: 100%;
+            height: auto;
+            max-height: 420px;
+            object-fit: contain;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+        .beer-preview-img {
+            width: 100%;
+            height: auto;
+            max-height: 70vh;
+            object-fit: contain;
+            padding: 8px;
+            box-sizing: border-box;
+            background: #09090b;
+            position: relative;
+            z-index: 0;
+        }
+        .beer-modal-frame {
+            position: relative;
+            background: #09090b;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            min-height: 240px;
+            max-height: 72vh;
+        }
+        .beer-modal-img {
+            width: 100%;
+            height: auto;
+            max-height: 72vh;
+            object-fit: contain;
+            padding: 8px;
+            box-sizing: border-box;
+            background: #09090b;
+        }
+
+
+        /* ===== Journal Gallery Layout Controls ===== */
+        .journal-view-select {
+            background: #09090b;
+            border: 1px solid #27272a;
+            border-radius: 0.75rem;
+            color: #d4d4d8;
+            padding: 0.65rem 0.85rem;
+            font-size: 0.75rem;
+            outline: none;
+        }
+        .journal-view-select:focus { border-color: #f59e0b; }
+        .gallery-cell-img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            background: #09090b;
+            padding: 6px;
+            box-sizing: border-box;
+        }
+        .gallery-cell-placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #09090b;
+            color: #3f3f46;
+        }
+        .gallery-overlay {
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            padding: 0.75rem;
+            background: linear-gradient(to top, rgba(0,0,0,0.88), rgba(0,0,0,0.35), transparent);
+        }
+        .journal-page-btn:disabled {
+            opacity: 0.35;
+            cursor: not-allowed;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            #bootScreen, .boot-emblem, .beer-icon-sparkle, .status-dot, .boot-log-line, .boot-progress-fill {
+                animation: none !important;
+                transition: opacity 0.2s ease !important;
+            }
+        }
+    </style>
+</head>
+<body class="font-sans antialiased min-h-screen flex flex-col">
+
+    <!-- ===== SVG Sprite: ไอคอนเบียร์ทรงพรีเมียมที่ออกแบบเอง (Steel x Amber, ได้แรงบันดาลใจจากเบียร์ลาเกอร์ญี่ปุ่นแบบเย็นฉ่ำ) ===== -->
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+        <defs>
+            <linearGradient id="grad-liquid" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#fde68a"/>
+                <stop offset="100%" stop-color="#d97706"/>
+            </linearGradient>
+            <linearGradient id="grad-glass" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#e2e8f0" stop-opacity="0.55"/>
+                <stop offset="100%" stop-color="#64748b" stop-opacity="0.15"/>
+            </linearGradient>
+            <linearGradient id="grad-badge" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#38bdf8"/>
+                <stop offset="100%" stop-color="#d97706"/>
+            </linearGradient>
+        </defs>
+        <symbol id="icon-beer-premium" viewBox="0 0 100 100">
+            <!-- หยดน้ำเกาะแก้ว -->
+            <circle cx="38" cy="52" r="1.8" fill="#e2e8f0" opacity="0.55"/>
+            <circle cx="50" cy="62" r="1.3" fill="#e2e8f0" opacity="0.45"/>
+            <circle cx="30" cy="64" r="1.1" fill="#e2e8f0" opacity="0.4"/>
+            <!-- หูจับแก้ว -->
+            <path d="M70 36 q20 0 20 17 q0 17 -20 17" fill="none" stroke="#cbd5e1" stroke-width="5.5" stroke-linecap="round"/>
+            <!-- ตัวแก้ว -->
+            <path d="M21 27 H71 L65 83 a7 7 0 0 1 -7 6 H35 a7 7 0 0 1 -7 -6 Z" fill="url(#grad-glass)" stroke="#cbd5e1" stroke-width="2.5" stroke-linejoin="round"/>
+            <!-- น้ำเบียร์ -->
+            <path d="M25.5 38 H66.5 L61.5 80 a4.5 4.5 0 0 1 -4.5 4 H35 a4.5 4.5 0 0 1 -4.5 -4 Z" fill="url(#grad-liquid)"/>
+            <!-- ฟองด้านบน -->
+            <path d="M19 26 q2 -9 9 -7 q2 -8 10 -5 q3 -7 11 -3 q4 -6 11 -1 q6 -5 10 2 q4 4 0 9 q-1 2 -4 2 H23 q-4 -1 -4 -3 q0 -1 0 -2 Z" fill="#fffbeb"/>
+            <!-- ประกายแวว (signature) -->
+            <g class="beer-icon-sparkle">
+                <path d="M81 14 l2.2 6.6 L90 23 l-6.8 2.4 L81 32 l-2.2 -6.6 L72 23 l6.8 -2.4 Z" fill="#bae6fd"/>
+            </g>
+        </symbol>
+    </svg>
+
+    <!-- ===== Boot / Splash Screen สไตล์ระบบปฏิบัติการ ===== -->
+    <div id="bootScreen">
+        <div class="flex flex-col items-center gap-5 px-6">
+            <svg class="w-24 h-24 boot-emblem" viewBox="0 0 100 100"><use href="#icon-beer-premium"></use></svg>
+            <div class="text-center">
+                <div class="font-title font-bold text-2xl tracking-[0.2em] text-zinc-100">BEER DIARY</div>
+                <div class="text-[11px] tracking-[0.35em] text-sky-400/80 font-semibold mt-1">S Y S T E M</div>
+            </div>
+            <div class="boot-progress-track">
+                <div id="bootProgressFill" class="boot-progress-fill"></div>
+            </div>
+            <div id="bootLog" class="font-mono text-[10px] text-zinc-500 space-y-1 text-center min-h-[60px]"></div>
+        </div>
+    </div>
+
+    <!-- แถบนำทางด้านบนแบบ Web App ระดับพรีเมียม -->
+    <header class="bg-zinc-950/90 backdrop-blur-md sticky top-0 z-40 border-b border-zinc-800/80 px-6 py-4">
+        <div class="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+            <!-- โลโก้แอป -->
+            <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-xl flex items-center justify-center shadow-lg shadow-amber-600/20" style="background: linear-gradient(135deg, #1e293b, #d97706);">
+                    <svg class="w-8 h-8 beer-icon-glow" viewBox="0 0 100 100"><use href="#icon-beer-premium"></use></svg>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h1 class="font-title font-bold text-xl text-amber-400 tracking-wide leading-none">Beer Diary Web</h1>
+                        <span class="hidden sm:flex items-center gap-1.5 bg-zinc-900 border border-zinc-800 px-2 py-0.5 rounded-full">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 status-dot"></span>
+                            <span class="text-[9px] font-bold tracking-widest text-emerald-400">SYSTEM READY</span>
+                        </span>
+                    </div>
+                    <span class="text-[11px] text-zinc-500">ระบบปฏิทินบันทึกการดื่มและสถิติค่าใช้จ่ายส่วนตัว</span>
+                </div>
+            </div>
+
+            <!-- เมนูเปลี่ยนแท็บสไตล์เว็บโมเดิร์น -->
+            <nav class="flex bg-zinc-900 p-1.5 rounded-xl border border-zinc-800">
+                <button onclick="switchTab('journal')" id="nav-journal" class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all text-amber-400 bg-zinc-850">
+                    <i class="fa-solid fa-book"></i> บันทึกทั้งหมด
+                </button>
+                <button onclick="switchTab('calendar')" id="nav-calendar" class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all text-zinc-400 hover:text-amber-400">
+                    <i class="fa-solid fa-calendar-days"></i> ปฏิทินการดื่ม
+                </button>
+                <button onclick="switchTab('add')" id="nav-add" class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all text-zinc-400 hover:text-amber-400">
+                    <i class="fa-solid fa-plus-circle"></i> เพิ่มบันทึกใหม่
+                </button>
+                <button onclick="switchTab('stats')" id="nav-stats" class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all text-zinc-400 hover:text-amber-400">
+                    <i class="fa-solid fa-chart-line"></i> สรุปและสถิติเงิน
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- พื้นที่แสดงเนื้อหาหลัก -->
+    <main class="flex-grow max-w-6xl w-full mx-auto p-4 sm:p-6 pb-24">
+        
+        <!-- ==================== แท็บ 1: บันทึกทั้งหมด (JOURNAL) ==================== -->
+        <section id="tab-journal" class="tab-content active space-y-6">
+            <!-- ส่วนหัวควบคุมการค้นหาและฟิลเตอร์ -->
+            <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 flex flex-col md:flex-row gap-4 items-center justify-between">
+                <h2 class="font-title font-semibold text-lg text-zinc-200 flex items-center gap-2 w-full md:w-auto">
+                    <i class="fa-solid fa-list-ol text-amber-500"></i> รายการเบียร์ที่เคยลิ้มลอง
+                </h2>
+                <div class="flex flex-col sm:flex-row gap-3 w-full md:w-auto md:flex-grow max-w-2xl justify-end">
+                    <div class="relative flex-grow">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500 text-sm"></i>
+                        <input type="text" id="searchInput" oninput="filterBeers()" placeholder="ค้นหาชื่อเบียร์, โรงเบียร์, สถานที่..." class="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-2 pl-10 pr-4 text-sm text-zinc-200 focus:outline-none focus:border-amber-500 transition-all">
+                    </div>
+                    <select id="styleFilter" onchange="filterBeers()" class="bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2 text-sm text-zinc-300 focus:outline-none focus:border-amber-500">
+                        <option value="All">ทุกสไตล์</option>
+                        <option value="Lager">Lager</option>
+                        <option value="IPA">IPA</option>
+                        <option value="Stout">Stout</option>
+                        <option value="Wheat">Wheat</option>
+                        <option value="Pale Ale">Pale Ale</option>
+                        <option value="Sour">Sour</option>
+                        <option value="Other">อื่นๆ</option>
+                    </select>
+                    <select id="sortFilter" onchange="filterBeers()" class="bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2 text-sm text-zinc-300 focus:outline-none focus:border-amber-500">
+                        <option value="newest">ล่าสุดก่อน</option>
+                        <option value="oldest">เก่าสุดก่อน</option>
+                        <option value="price-desc">ราคา: มาก → น้อย</option>
+                        <option value="price-asc">ราคา: น้อย → มาก</option>
+                        <option value="rating-desc">คะแนนสูงสุด</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- ตัวเลือกมุมมองแกลอรี่ / จำนวนช่องที่แสดง -->
+            <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 flex flex-col lg:flex-row gap-4 lg:items-center justify-between">
+                <div class="space-y-1">
+                    <h3 class="font-title font-semibold text-zinc-200 text-sm flex items-center gap-2">
+                        <i class="fa-solid fa-table-cells-large text-purple-400"></i> รูปแบบการโชว์ในหน้าบันทึกทั้งหมด
+                    </h3>
+                    <p class="text-[11px] text-zinc-500">เลือกได้ว่าจะดูแบบการ์ดละเอียด หรือแบบแกลอรี่รูปภาพ พร้อมกำหนดจำนวนช่องต่อหน้า เช่น 9 ช่อง</p>
+                </div>
+
+                <div class="flex flex-col sm:flex-row gap-3 lg:items-center">
+                    <div class="flex items-center gap-2">
+                        <label for="journalViewMode" class="text-[11px] text-zinc-500 font-semibold whitespace-nowrap">มุมมอง</label>
+                        <select id="journalViewMode" onchange="updateJournalViewMode(this.value)" class="journal-view-select">
+                            <option value="card">การ์ดละเอียด</option>
+                            <option value="gallery">แกลอรี่รูปภาพ</option>
+                            <option value="compact">แกลอรี่ + ชื่อสั้น</option>
+                        </select>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <label for="journalPageSize" class="text-[11px] text-zinc-500 font-semibold whitespace-nowrap">จำนวนช่อง</label>
+                        <select id="journalPageSize" onchange="updateJournalPageSize(this.value)" class="journal-view-select">
+                            <option value="all">แสดงทั้งหมด</option>
+                            <option value="6">6 ช่อง</option>
+                            <option value="9">9 ช่อง</option>
+                            <option value="12">12 ช่อง</option>
+                            <option value="18">18 ช่อง</option>
+                            <option value="24">24 ช่อง</option>
+                        </select>
+                    </div>
+                    <div class="flex items-center gap-2 justify-end">
+                        <button id="journalPrevBtn" type="button" onclick="changeJournalPage(-1)" class="journal-page-btn bg-zinc-950 border border-zinc-800 hover:border-amber-500/40 text-zinc-300 hover:text-amber-400 px-3 py-2 rounded-xl text-xs transition-colors">
+                            <i class="fa-solid fa-chevron-left"></i>
+                        </button>
+                        <span id="journalPageInfo" class="text-[11px] text-zinc-500 min-w-[120px] text-center">-</span>
+                        <button id="journalNextBtn" type="button" onclick="changeJournalPage(1)" class="journal-page-btn bg-zinc-950 border border-zinc-800 hover:border-amber-500/40 text-zinc-300 hover:text-amber-400 px-3 py-2 rounded-xl text-xs transition-colors">
+                            <i class="fa-solid fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- รายการแสดงผลแบบการ์ด / แกลอรี่ -->
+            <div id="beerGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+
+            <!-- หน้าแสดงเมื่อไม่มีข้อมูล -->
+            <div id="emptyState" class="hidden py-24 text-center space-y-4 bg-zinc-900 rounded-3xl border border-zinc-800 border-dashed">
+                <div class="w-24 h-24 bg-zinc-800/50 rounded-full flex items-center justify-center mx-auto text-zinc-600">
+                    <svg class="w-12 h-12 opacity-70" viewBox="0 0 100 100"><use href="#icon-beer-premium"></use></svg>
+                </div>
+                <div>
+                    <h3 class="font-title font-medium text-xl text-zinc-300">ยังไม่มีประวัติการบันทึกเลย</h3>
+                    <p class="text-sm text-zinc-500 mt-2">มาเริ่มจดบันทึกเบียร์แก้วโปรดพร้อมราคาและวันที่ดื่มกันเถอะ!</p>
+                </div>
+                <button onclick="switchTab('add')" class="bg-amber-500 hover:bg-amber-600 text-zinc-950 font-semibold px-6 py-2.5 rounded-xl text-sm transition-all inline-flex items-center gap-2">
+                    <i class="fa-solid fa-plus"></i> เพิ่มบันทึกแก้วแรก
+                </button>
+            </div>
+        </section>
+
+
+        <!-- ==================== แท็บ 2: ปฏิทินการดื่ม (CALENDAR) ==================== -->
+        <section id="tab-calendar" class="tab-content space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- ฝั่งซ้าย: ตัวปฏิทินประจำเดือน -->
+                <div class="lg:col-span-2 bg-zinc-900 border border-zinc-800 rounded-3xl p-6 space-y-4 shadow-xl">
+                    <div class="flex items-center justify-between">
+                        <h2 class="font-title font-semibold text-xl text-amber-400 flex items-center gap-2">
+                            <i class="fa-solid fa-calendar-alt"></i> ปฏิทินบันทึกรายเดือน
+                        </h2>
+                        <!-- ตัวเปลี่ยนเดือน -->
+                        <div class="flex items-center gap-2">
+                            <button onclick="goToToday()" class="text-[11px] font-semibold text-zinc-400 hover:text-amber-400 bg-zinc-950 border border-zinc-800 hover:border-amber-500/40 px-3 py-2 rounded-xl transition-colors">วันนี้</button>
+                            <div class="flex items-center gap-2 bg-zinc-950 px-3 py-1.5 rounded-xl border border-zinc-800">
+                                <button onclick="navigateMonth(-1)" class="text-zinc-400 hover:text-amber-500 px-2 py-1"><i class="fa-solid fa-chevron-left"></i></button>
+                                <span id="currentMonthYear" class="text-sm font-semibold tracking-wide text-zinc-200 min-w-[120px] text-center font-title">มิถุนายน 2026</span>
+                                <button onclick="navigateMonth(1)" class="text-zinc-400 hover:text-amber-500 px-2 py-1"><i class="fa-solid fa-chevron-right"></i></button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ตารางปฏิทิน -->
+                    <div class="grid grid-cols-7 gap-1.5 text-center text-xs font-semibold text-zinc-500 py-2 border-b border-zinc-800/60">
+                        <div>อา.</div><div>จ.</div><div>อ.</div><div>พ.</div><div>พฤ.</div><div>ศ.</div><div>ส.</div>
+                    </div>
+                    <div id="calendarGrid" class="grid grid-cols-7 gap-1.5"></div>
+                </div>
+
+                <!-- ฝั่งขวา: รายละเอียดเบียร์ที่กินในวันที่เลือก -->
+                <div class="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 flex flex-col justify-between shadow-xl">
+                    <div class="space-y-4">
+                        <div class="border-b border-zinc-800/60 pb-3 flex justify-between items-center">
+                            <h3 class="font-title font-semibold text-zinc-200 flex items-center gap-2">
+                                <i class="fa-solid fa-clock-rotate-left text-amber-500"></i> รายการของวันที่
+                            </h3>
+                            <span id="selectedDateDisplay" class="text-xs font-bold text-amber-400 bg-amber-500/10 px-3 py-1 rounded-full">-</span>
+                        </div>
+                        
+                        <!-- ยอดเงินรวมของวันนั้น -->
+                        <div class="bg-zinc-950 rounded-xl p-3 flex justify-between items-center border border-zinc-800/50">
+                            <span class="text-xs text-zinc-400 font-medium">รวมค่าเสียหายวันนี้:</span>
+                            <span id="dayTotalCost" class="text-lg font-title font-bold text-amber-400">0 ฿</span>
+                        </div>
+
+                        <!-- ลิสต์รายการที่ดื่มในวันนั้น -->
+                        <div id="dayBeerList" class="space-y-3 max-h-[320px] overflow-y-auto pr-1"></div>
+                    </div>
+
+                    <div class="pt-4">
+                        <button id="addRecordForDateBtn" onclick="prepareAddForSelectedDate()" class="w-full bg-amber-500/10 border border-amber-500/20 text-amber-400 hover:bg-amber-500/20 font-medium py-3 rounded-xl text-xs transition-all flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-plus-circle"></i> เพิ่มบันทึกสำหรับวันนี้
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ==================== แท็บ 3: เพิ่มบันทึกเบียร์ใหม่ (ADD RECORD) ==================== -->
+        <section id="tab-add" class="tab-content space-y-6">
+            <div class="max-w-2xl mx-auto bg-zinc-900 border border-zinc-800 rounded-3xl p-6 sm:p-8 shadow-xl">
+                <div class="flex items-center justify-between gap-3 border-b border-zinc-800 pb-4 mb-6">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-amber-500/10 text-amber-500 rounded-xl flex items-center justify-center text-lg"><i id="addFormIcon" class="fa-solid fa-plus"></i></div>
+                        <div>
+                            <h2 id="addFormTitle" class="font-title font-semibold text-lg text-zinc-100">บันทึกเบียร์แก้วใหม่</h2>
+                            <p id="addFormSubtitle" class="text-xs text-zinc-500">ใส่รายละเอียดเบียร์ รสชาติ และงบค่าใช้จ่ายของคุณ</p>
+                        </div>
+                    </div>
+                    <button type="button" id="cancelEditBtn" onclick="cancelEditMode()" class="hidden flex-shrink-0 text-xs text-zinc-400 hover:text-red-400 border border-zinc-800 hover:border-red-500/40 px-3 py-2 rounded-lg transition-colors flex items-center gap-1.5">
+                        <i class="fa-solid fa-xmark"></i> ยกเลิกแก้ไข
+                    </button>
+                </div>
+
+                <form id="beerForm" onsubmit="saveBeerRecord(event)" class="space-y-6">
+                    <!-- รูปถ่ายฉลาก/อัปโหลดภาพ -->
+                    <div class="bg-zinc-950 border-2 border-dashed border-zinc-800 rounded-2xl p-8 text-center relative overflow-hidden group hover:border-amber-500/50 transition-colors min-h-[280px] sm:min-h-[360px] flex items-center justify-center">
+                        <input type="file" id="beerImageInput" accept="image/*" onchange="previewImage(event)" class="absolute inset-0 opacity-0 cursor-pointer z-10">
+                        <div id="uploadPlaceholder" class="space-y-2">
+                            <div class="w-14 h-14 bg-amber-500/10 text-amber-500 rounded-full flex items-center justify-center mx-auto">
+                                <i class="fa-solid fa-camera text-2xl"></i>
+                            </div>
+                            <div class="text-sm">
+                                <span class="text-amber-500 font-semibold">อัปโหลดรูปภาพฉลาก</span> หรือลากไฟล์มาวางที่นี่
+                            </div>
+                            <p class="text-xs text-zinc-500">รองรับไฟล์ภาพ JPEG, PNG (จะย่อรูปอัตโนมัติ และแสดงเต็มภาพในกรอบ)</p>
+                        </div>
+                        <img id="imagePreview" class="hidden beer-preview-img">
+                        <button type="button" id="removeImgBtn" onclick="clearImagePreview(event)" class="hidden absolute top-4 right-4 bg-red-600 hover:bg-red-700 text-white w-9 h-9 rounded-full flex items-center justify-center z-20 transition-colors">
+                            <i class="fa-solid fa-trash-can text-sm"></i>
+                        </button>
+                    </div>
+
+                    <!-- AI OCR อ่านข้อความฉลากผ่าน Supabase Edge Function + Gemini -->
+                    <div class="space-y-2">
+                        <button
+                            type="button"
+                            id="aiAnalyzeBtn"
+                            onclick="analyzeLabelWithAI()"
+                            class="w-full bg-sky-500/10 border border-sky-500/20 text-sky-400 hover:bg-sky-500/20 font-medium py-3 rounded-xl text-xs transition-all flex items-center justify-center gap-2"
+                        >
+                            <i class="fa-solid fa-wand-magic-sparkles"></i>
+                            AI OCR อ่านข้อความฉลาก
+                        </button>
+                        <p id="aiAnalyzeStatus" class="text-[11px] text-zinc-500 text-center">
+                            อัปโหลดรูปฉลากก่อน แล้วกดปุ่มนี้เพื่อให้ AI อ่านข้อความบนฉลากและใส่ใน Notes
+                        </p>
+                    </div>
+
+                    <!-- สร้างบันทึกหลายรายการจากหลายรูป -->
+                    <div class="space-y-2 bg-zinc-950 border border-purple-500/20 rounded-2xl p-4">
+                        <input
+                            type="file"
+                            id="multiImageInput"
+                            accept="image/*"
+                            multiple
+                            onchange="createDraftsFromMultipleImages(event)"
+                            class="hidden"
+                        >
+                        <button
+                            type="button"
+                            id="multiDraftBtn"
+                            onclick="document.getElementById('multiImageInput').click()"
+                            class="w-full bg-purple-500/10 border border-purple-500/20 text-purple-400 hover:bg-purple-500/20 font-medium py-3 rounded-xl text-xs transition-all flex items-center justify-center gap-2"
+                        >
+                            <i class="fa-solid fa-images"></i>
+                            เลือกหลายรูปแล้วสร้างรายการร่าง
+                        </button>
+                        <p id="multiDraftStatus" class="text-[11px] text-zinc-500 text-center">
+                            เลือกได้สูงสุด 5 รูป ระบบจะสร้าง 1 รูป = 1 รายการ พร้อมรูปเต็มพอดีในกรอบ แล้วค่อยกลับมาแก้รายละเอียดทีหลัง
+                        </p>
+                    </div>
+
+                    <!-- ข้อมูลฟิลด์ฟอร์ม -->
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-zinc-400 mb-1.5">ชื่อเบียร์ (Beer Name)</label>
+                                <input type="text" id="beerName" placeholder="ตัวอย่าง: Mahanakhon, Budweiser..." class="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-3 px-4 text-zinc-200 focus:outline-none focus:border-amber-500 text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-zinc-400 mb-1.5">โรงเบียร์ (Brewery)</label>
+                                <input type="text" id="brewery" placeholder="ตัวอย่าง: Singha Co., Heineken" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-3 px-4 text-zinc-200 focus:outline-none focus:border-amber-500 text-sm">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-zinc-400 mb-1.5">ประเภทเบียร์ (Style)</label>
+                                <select id="beerStyle" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-3 px-4 text-zinc-200 focus:outline-none focus:border-amber-500 text-sm">
+                                    <option value="Lager">Lager</option>
+                                    <option value="IPA">IPA</option>
+                                    <option value="Stout">Stout</option>
+                                    <option value="Wheat">Wheat</option>
+                                    <option value="Pale Ale">Pale Ale</option>
+                                    <option value="Sour">Sour</option>
+                                    <option value="Cider">Cider</option>
+                                    <option value="Other">อื่นๆ</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-zinc-400 mb-1.5">แอลกอฮอล์ (ABV %)</label>
+                                <input type="number" id="abv" step="0.1" min="0" placeholder="ตัวอย่าง: 5.0" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-3 px-4 text-zinc-200 focus:outline-none focus:border-amber-500 text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-zinc-400 mb-1.5">ราคา (บาท)</label>
+                                <input type="number" id="beerPrice" min="0" placeholder="ตัวอย่าง: 120" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-3 px-4 text-zinc-200 focus:outline-none focus:border-amber-500 text-sm">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-zinc-400 mb-1.5">วันที่ลิ้มลอง (Date) *</label>
+                                <input type="date" id="beerDate" required class="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-3 px-4 text-zinc-200 focus:outline-none focus:border-amber-500 text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-zinc-400 mb-1.5">สถานที่ซื้อ/สถานที่ดื่ม</label>
+                                <input type="text" id="location" placeholder="ตัวอย่าง: Craft Cafe, Home" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-3 px-4 text-zinc-200 focus:outline-none focus:border-amber-500 text-sm">
+                            </div>
+                        </div>
+
+                        <!-- คะแนนความชอบ (Rating) -->
+                        <div class="bg-zinc-950 p-4 rounded-2xl border border-zinc-800/60">
+                            <label class="block text-xs font-semibold text-zinc-400 mb-2">คะแนนความชอบ (Rating)</label>
+                            <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+                                <div class="flex gap-2" id="ratingStars">
+                                    <button type="button" onclick="setRating(1)" class="text-3xl text-zinc-700 hover:text-amber-400 transition-colors"><i class="fa-solid fa-star"></i></button>
+                                    <button type="button" onclick="setRating(2)" class="text-3xl text-zinc-700 hover:text-amber-400 transition-colors"><i class="fa-solid fa-star"></i></button>
+                                    <button type="button" onclick="setRating(3)" class="text-3xl text-zinc-700 hover:text-amber-400 transition-colors"><i class="fa-solid fa-star"></i></button>
+                                    <button type="button" onclick="setRating(4)" class="text-3xl text-zinc-700 hover:text-amber-400 transition-colors"><i class="fa-solid fa-star"></i></button>
+                                    <button type="button" onclick="setRating(5)" class="text-3xl text-zinc-700 hover:text-amber-400 transition-colors"><i class="fa-solid fa-star"></i></button>
+                                </div>
+                                <span id="ratingValueDisplay" class="text-sm text-zinc-400 font-medium">ยังไม่ให้คะแนน</span>
+                                <input type="hidden" id="beerRating" value="0">
+                            </div>
+                        </div>
+
+                        <!-- โปรไฟล์รสชาติ -->
+                        <div>
+                            <label class="block text-xs font-semibold text-zinc-400 mb-2">โปรไฟล์รสชาติที่พบสัมผัส</label>
+                            <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                <label class="bg-zinc-950 border border-zinc-800 rounded-xl p-3 flex items-center justify-center gap-2.5 cursor-pointer hover:border-amber-500/30 transition-colors">
+                                    <input type="checkbox" name="profile" value="ฮอปส์เด่น" class="accent-amber-500">
+                                    <span class="text-xs text-zinc-300">ฮอปส์เด่น</span>
+                                </label>
+                                <label class="bg-zinc-950 border border-zinc-800 rounded-xl p-3 flex items-center justify-center gap-2.5 cursor-pointer hover:border-amber-500/30 transition-colors">
+                                    <input type="checkbox" name="profile" value="มอลต์เข้ม" class="accent-amber-500">
+                                    <span class="text-xs text-zinc-300">มอลต์เข้ม</span>
+                                </label>
+                                <label class="bg-zinc-950 border border-zinc-800 rounded-xl p-3 flex items-center justify-center gap-2.5 cursor-pointer hover:border-amber-500/30 transition-colors">
+                                    <input type="checkbox" name="profile" value="ฟรุตตี้สดชื่น" class="accent-amber-500">
+                                    <span class="text-xs text-zinc-300">ฟรุตตี้</span>
+                                </label>
+                                <label class="bg-zinc-950 border border-zinc-800 rounded-xl p-3 flex items-center justify-center gap-2.5 cursor-pointer hover:border-amber-500/30 transition-colors">
+                                    <input type="checkbox" name="profile" value="ขมนำ" class="accent-amber-500">
+                                    <span class="text-xs text-zinc-300">ขมนำ</span>
+                                </label>
+                                <label class="bg-zinc-950 border border-zinc-800 rounded-xl p-3 flex items-center justify-center gap-2.5 cursor-pointer hover:border-amber-500/30 transition-colors">
+                                    <input type="checkbox" name="profile" value="หวานปลาย" class="accent-amber-500">
+                                    <span class="text-xs text-zinc-300">หวานปลาย</span>
+                                </label>
+                                <label class="bg-zinc-950 border border-zinc-800 rounded-xl p-3 flex items-center justify-center gap-2.5 cursor-pointer hover:border-amber-500/30 transition-colors">
+                                    <input type="checkbox" name="profile" value="ดื่มลื่นสดชื่น" class="accent-amber-500">
+                                    <span class="text-xs text-zinc-300">คลีนสดชื่น</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-zinc-400 mb-1.5">บันทึกช่วยจำ (Tasting Notes)</label>
+                            <textarea id="tastingNotes" rows="3" placeholder="เขียนอธิบายรสชาติ สี หรือรีวิวสั้นๆ เพิ่มเติม..." class="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-3 px-4 text-zinc-200 focus:outline-none focus:border-amber-500 text-sm"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- ปุ่มส่งบันทึก -->
+                    <button type="submit" class="w-full bg-amber-500 hover:bg-amber-600 text-zinc-950 font-title font-bold py-4 rounded-xl transition-all shadow-lg shadow-amber-500/10 flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-beer-mug-empty"></i> <span id="submitBtnText">บันทึกไว้ก่อน / กลับมาแก้ทีหลัง</span>
+                    </button>
+                </form>
+            </div>
+        </section>
+
+
+        <!-- ==================== แท็บ 4: สรุปสถิติ (STATS & FINANCE) ==================== -->
+        <section id="tab-stats" class="tab-content space-y-6">
+            <!-- คอลัมน์รายงานสถิติหลัก -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- การ์ด 1: จำนวน -->
+                <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 flex items-center justify-between shadow-xl">
+                    <div class="space-y-1">
+                        <span class="text-xs text-zinc-400 font-medium">บันทึกสะสมทั้งหมด</span>
+                        <div class="flex items-baseline gap-1.5">
+                            <span id="stat-total-beers" class="text-4xl font-title font-bold text-amber-400">0</span>
+                            <span class="text-xs text-zinc-500">แก้ว</span>
+                        </div>
+                    </div>
+                    <div class="w-14 h-14 bg-amber-500/10 text-amber-500 rounded-xl flex items-center justify-center text-2xl"><i class="fa-solid fa-glass-cheers"></i></div>
+                </div>
+
+                <!-- การ์ด 2: ยอดเงินรวม -->
+                <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 flex items-center justify-between shadow-xl">
+                    <div class="space-y-1">
+                        <span class="text-xs text-zinc-400 font-medium">ยอดเงินรวมที่เปย์ไปทั้งหมด</span>
+                        <div class="flex items-baseline gap-1.5">
+                            <span id="stat-total-cost" class="text-4xl font-title font-bold text-emerald-400">0</span>
+                            <span class="text-xs text-zinc-500">บาท</span>
+                        </div>
+                    </div>
+                    <div class="w-14 h-14 bg-emerald-500/10 text-emerald-400 rounded-xl flex items-center justify-center text-2xl"><i class="fa-solid fa-wallet"></i></div>
+                </div>
+
+                <!-- การ์ด 3: คะแนนเฉลี่ย -->
+                <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 flex items-center justify-between shadow-xl">
+                    <div class="space-y-1">
+                        <span class="text-xs text-zinc-400 font-medium">คะแนนความชอบเฉลี่ย</span>
+                        <div class="flex items-baseline gap-1.5">
+                            <span id="stat-avg-rating" class="text-4xl font-title font-bold text-yellow-400">0.0</span>
+                            <span class="text-xs text-zinc-500">/ 5.0 ดาว</span>
+                        </div>
+                    </div>
+                    <div class="w-14 h-14 bg-yellow-500/10 text-yellow-500 rounded-xl flex items-center justify-center text-2xl"><i class="fa-solid fa-star"></i></div>
+                </div>
+            </div>
+
+            <!-- รายละเอียดทางสถิติสไตล์โปรด -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- สไตล์สุดฮิต -->
+                <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 space-y-4 shadow-xl">
+                    <div class="flex items-center justify-between border-b border-zinc-800/60 pb-3">
+                        <h3 class="font-title font-semibold text-zinc-200 flex items-center gap-2">
+                            <i class="fa-solid fa-chart-pie text-amber-500"></i> สไตล์เบียร์ยอดนิยมของคุณ
+                        </h3>
+                        <span id="stat-favorite-style" class="text-xs bg-amber-500/15 text-amber-400 font-bold px-3 py-1 rounded-full">-</span>
+                    </div>
+                    <div id="styleStatsContainer" class="space-y-4"></div>
+                </div>
+
+                <!-- รสสัมผัสที่เจอบ่อย -->
+                <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 space-y-4 shadow-xl">
+                    <div class="border-b border-zinc-800/60 pb-3">
+                        <h3 class="font-title font-semibold text-zinc-200 flex items-center gap-2">
+                            <i class="fa-solid fa-tags text-amber-500"></i> โปรไฟล์รสชาติที่สัมผัสบ่อยที่สุด
+                        </h3>
+                    </div>
+                    <div id="stat-tags-cloud" class="flex flex-wrap gap-2.5 pt-2">
+                        <span class="text-sm text-zinc-500 italic">ยังไม่มีข้อมูลรสชาติสะสม</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ระบบสำรอง/นำเข้า/ล้างข้อมูล -->
+            <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 space-y-4 shadow-xl">
+                <div class="flex items-center gap-2 border-b border-zinc-800/60 pb-3">
+                    <svg class="w-5 h-5 text-sky-400" viewBox="0 0 100 100"><use href="#icon-beer-premium"></use></svg>
+                    <div>
+                        <h3 class="font-title font-semibold text-zinc-200">จัดการข้อมูลระบบ</h3>
+                        <p class="text-[11px] text-zinc-500">ข้อมูลหลักซิงก์ผ่าน Supabase Cloud ใช้ชุดเดียวกันได้หลายอุปกรณ์ และยังสำรอง/นำเข้า JSON ได้</p>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <button onclick="exportData()" class="w-full text-sky-400 border border-sky-500/20 bg-sky-500/5 py-3 rounded-xl hover:bg-sky-500/10 hover:border-sky-500/40 transition-all font-semibold text-xs flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-download"></i> สำรองข้อมูล (Export)
+                    </button>
+                    <button onclick="document.getElementById('importFileInput').click()" class="w-full text-emerald-400 border border-emerald-500/20 bg-emerald-500/5 py-3 rounded-xl hover:bg-emerald-500/10 hover:border-emerald-500/40 transition-all font-semibold text-xs flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-upload"></i> นำเข้าข้อมูล (Import)
+                    </button>
+                    <input type="file" id="importFileInput" accept="application/json" onchange="importData(event)" class="hidden">
+                    <button onclick="resetAllData()" class="w-full text-red-400 border border-red-500/20 bg-red-500/5 py-3 rounded-xl hover:bg-red-500/10 hover:border-red-500/40 transition-all font-semibold text-xs flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-trash-can"></i> ล้างข้อมูลทั้งหมด
+                    </button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Modal แสดงแบบฟอร์มดีเทลแบบละเอียด (Beer View Modal Detail) -->
+    <div id="recordModal" class="hidden fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        <div class="w-full max-w-lg bg-zinc-900 border border-zinc-800 rounded-3xl overflow-hidden shadow-2xl max-h-[90vh] flex flex-col">
+            <!-- ส่วนรูปภาพฉลากเบียร์ -->
+            <div class="beer-modal-frame">
+                <img id="modalImage" class="beer-modal-img" src="" alt="Beer label">
+                <div id="modalImagePlaceholder" class="hidden text-zinc-700 flex flex-col items-center">
+                    <svg class="w-20 h-20 opacity-70" viewBox="0 0 100 100"><use href="#icon-beer-premium"></use></svg>
+                    <span class="text-xs mt-2">ไม่มีภาพฉลากประกอบ</span>
+                </div>
+                <button onclick="closeModal()" class="absolute top-4 right-4 bg-black/60 hover:bg-black/80 text-zinc-200 w-9 h-9 rounded-full flex items-center justify-center transition-colors">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+                <span id="modalStyle" class="absolute bottom-4 left-4 bg-amber-500 text-zinc-950 text-xs font-bold px-3.5 py-1.5 rounded-xl shadow-lg">Style</span>
+                <span id="modalDate" class="absolute bottom-4 right-4 bg-zinc-950/80 backdrop-blur-sm text-zinc-300 text-xs font-semibold px-3 py-1.5 rounded-xl">Date</span>
+            </div>
+
+            <!-- ส่วนข้อมูลเนื้อหา -->
+            <div class="p-6 space-y-5 overflow-y-auto flex-grow">
+                <div>
+                    <div class="flex justify-between items-start gap-4">
+                        <div>
+                            <h3 id="modalName" class="font-title font-bold text-2xl text-zinc-100">ชื่อเบียร์</h3>
+                            <p id="modalBrewery" class="text-zinc-400 text-xs mt-0.5">โดย โรงผลิต</p>
+                        </div>
+                        <div class="flex text-yellow-400 gap-0.5 text-lg" id="modalStars"></div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-4 py-4 border-y border-zinc-800/60">
+                    <div>
+                        <span class="text-[10px] text-zinc-500 uppercase tracking-wider font-bold block">แอลกอฮอล์ (ABV)</span>
+                        <span id="modalABV" class="text-zinc-200 font-semibold text-sm">-%</span>
+                    </div>
+                    <div>
+                        <span class="text-[10px] text-zinc-500 uppercase tracking-wider font-bold block">ราคาต่อแก้ว/ขวด</span>
+                        <span id="modalPrice" class="text-emerald-400 font-bold text-sm">0 ฿</span>
+                    </div>
+                    <div>
+                        <span class="text-[10px] text-zinc-500 uppercase tracking-wider font-bold block">สถานที่จัดซื้อ</span>
+                        <span id="modalLocation" class="text-zinc-200 font-semibold text-sm">-</span>
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <span class="text-[10px] text-zinc-500 uppercase block font-bold">คาแรคเตอร์รสสัมผัสที่ระบุ</span>
+                    <div id="modalTags" class="flex flex-wrap gap-1.5"></div>
+                </div>
+
+                <div class="space-y-2 bg-zinc-950 p-4 rounded-xl border border-zinc-800/50">
+                    <span class="text-[10px] text-amber-500 uppercase block font-bold">บันทึกช่วยจำรสชาติ (Notes)</span>
+                    <p id="modalNotes" class="text-xs text-zinc-300 leading-relaxed italic">ไม่มีบันทึกรีวิวเพิ่มเติม</p>
+                </div>
+
+                <!-- ปุ่มดำเนินการแก้ไข/ลบ -->
+                <div class="grid grid-cols-2 gap-3">
+                    <button id="editRecordBtn" class="w-full text-amber-400 border border-amber-500/20 bg-amber-500/5 py-3 rounded-xl hover:bg-amber-500/10 hover:border-amber-500/40 transition-all font-semibold text-xs flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-pen"></i> แก้ไขบันทึก
+                    </button>
+                    <button id="deleteRecordBtn" class="w-full text-red-400 border border-red-500/20 bg-red-500/5 py-3 rounded-xl hover:bg-red-500/10 hover:border-red-500/40 transition-all font-semibold text-xs flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-trash-can"></i> ลบข้อมูลบันทึกนี้
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ฟังก์ชันการคำนวณและประมวลผลระบบด้วย Pure Javascript -->
+    <script>
+        // ===== Supabase Cloud Sync Config =====
+        // ใช้ Project URL และ Publishable/Anon Key ของโปรเจกต์ Supabase beer-diary
+        var SUPABASE_URL = "https://wvmutodpzeapjucmodhq.supabase.co";
+        var SUPABASE_KEY = "sb_publishable_aTY62W6qgeIFO9fRy-BnLg_CPA2nkSY";
+        var supabaseClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
+
+        // ข้อมูลหลัก: ดึงจาก Supabase Cloud หากไม่มีจะย้ายจาก localStorage หรือแสดงตัวอย่าง
+        var beers = [];
+        var defaultBeers = [
+            {
+                id: "BEER_1",
+                name: "Mahanakhon White Ale",
+                brewery: "Mahanakhon Brewery",
+                style: "Wheat",
+                abv: "5.1",
+                price: 135,
+                location: "Home",
+                date: "2026-06-15",
+                rating: 4,
+                profiles: ["ฟรุตตี้สดชื่น", "ดื่มลื่นสดชื่น"],
+                notes: "กลิ่นส้มและพืชสมุนไพรเด่น ดื่มง่าย นุ่มละมุน เหมาะกับวันสบายๆ",
+                image: ""
+            },
+            {
+                id: "BEER_2",
+                name: "Punk IPA",
+                brewery: "BrewDog",
+                style: "IPA",
+                abv: "5.4",
+                price: 180,
+                location: "Craft Cafe",
+                date: "2026-06-20",
+                rating: 5,
+                profiles: ["ฮอปส์เด่น", "ขมนำ", "ฟรุตตี้สดชื่น"],
+                notes: "กลิ่นทรอปิคอลฟรุตชัดเจนมาก ขมสะใจแต่จบคลีน คลาสสิกยอดฝีมือ",
+                image: ""
+            }
+        ];
+
+        // วันที่ปฏิทินที่เลือกปัจจุบัน (State)
+        var currentDate = new Date();
+        var selectedDateString = getFormattedDateString(new Date());
+        var editingRecordId = null; // เก็บ id ของบันทึกที่กำลังแก้ไขอยู่ (null = โหมดเพิ่มใหม่)
+        var selectedImageBase64 = "";
+        var journalViewMode = localStorage.getItem('beer_diary_journal_view_mode') || 'card';
+        var journalPageSize = localStorage.getItem('beer_diary_journal_page_size') || 'all';
+        var journalCurrentPage = 1;
+        var lastJournalFilterKey = '';
+
+        window.addEventListener('DOMContentLoaded', async function() {
+            runBootSequence();
+
+            // โหลดข้อมูลหลักจาก Supabase Cloud
+            await initializeCloudData();
+
+            // ตั้งค่าวันที่เริ่มต้นใน Input ของฟอร์มเป็นวันนี้
+            document.getElementById('beerDate').value = getFormattedDateString(new Date());
+            initJournalViewControls();
+
+            // แสดงข้อมูลครั้งแรก
+            refreshAllViews();
+        });
+
+        // --- หน้าจอ Boot/Splash สไตล์ระบบปฏิบัติการตอนเปิดแอป ---
+        function runBootSequence() {
+            var bootScreen = document.getElementById('bootScreen');
+            var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+            if (reduceMotion) {
+                bootScreen.remove();
+                return;
+            }
+
+            var logLines = [
+                'INITIALIZING TAP SYSTEM...',
+                'LOADING FLAVOR DATABASE...',
+                'CALIBRATING CHILL SENSORS...',
+                'SYSTEM READY.'
+            ];
+            var logContainer = document.getElementById('bootLog');
+            var progressFill = document.getElementById('bootProgressFill');
+
+            // เริ่มเติมแถบความคืบหน้า
+            setTimeout(function() { progressFill.style.width = '100%'; }, 50);
+
+            var index = 0;
+            function showNextLine() {
+                if (index < logLines.length) {
+                    var line = document.createElement('div');
+                    line.className = 'boot-log-line';
+                    line.innerText = logLines[index];
+                    logContainer.appendChild(line);
+                    index++;
+                    setTimeout(showNextLine, 320);
+                } else {
+                    setTimeout(finishBoot, 350);
+                }
+            }
+            setTimeout(showNextLine, 250);
+
+            function finishBoot() {
+                bootScreen.classList.add('boot-fade-out');
+                setTimeout(function() { bootScreen.remove(); }, 500);
+            }
+        }
+
+        // --- Supabase Cloud Sync Helpers ---
+        function normalizeBeer(beer) {
+            return {
+                id: String(beer.id || ("BEER_" + new Date().getTime())),
+                name: beer.name || "ไม่ระบุชื่อเบียร์",
+                brewery: beer.brewery || "ไม่ระบุโรงผลิต",
+                style: beer.style || "Other",
+                abv: beer.abv || "-",
+                price: parseInt(beer.price) || 0,
+                location: beer.location || "-",
+                date: beer.date || getFormattedDateString(new Date()),
+                rating: parseInt(beer.rating) || 0,
+                profiles: Array.isArray(beer.profiles) ? beer.profiles : [],
+                notes: beer.notes || "",
+                image: beer.image || ""
+            };
+        }
+
+        function refreshAllViews() {
+            filterBeers();
+            renderCalendar();
+            showSelectedDayDetails();
+            calculateStats();
+        }
+
+        // เก็บสำเนาไว้ในเครื่องเพื่อ fallback เท่านั้น ไม่ใช่ฐานข้อมูลหลัก
+        function saveToLocalStorage() {
+            try {
+                localStorage.setItem('beer_diary_data_cloud_backup', JSON.stringify(beers));
+            } catch (err) {
+                console.warn('Local backup failed:', err);
+            }
+        }
+
+        function loadLocalMigrationData() {
+            try {
+                var oldData = localStorage.getItem('beer_diary_data');
+                if (oldData) {
+                    var parsedOld = JSON.parse(oldData);
+                    if (Array.isArray(parsedOld) && parsedOld.length > 0) {
+                        return parsedOld.map(normalizeBeer);
+                    }
+                }
+
+                var backupData = localStorage.getItem('beer_diary_data_cloud_backup');
+                if (backupData) {
+                    var parsedBackup = JSON.parse(backupData);
+                    if (Array.isArray(parsedBackup) && parsedBackup.length > 0) {
+                        return parsedBackup.map(normalizeBeer);
+                    }
+                }
+            } catch (err) {
+                console.warn('Local migration data is invalid:', err);
+            }
+            return [];
+        }
+
+        async function loadFromSupabase() {
+            if (!supabaseClient) {
+                throw new Error('Supabase SDK ไม่พร้อมใช้งาน');
+            }
+
+            var result = await supabaseClient
+                .from('beers')
+                .select('*')
+                .order('date', { ascending: false })
+                .order('created_at', { ascending: false });
+
+            if (result.error) {
+                throw result.error;
+            }
+
+            return (result.data || []).map(normalizeBeer);
+        }
+
+        async function upsertBeerToSupabase(beer) {
+            if (!supabaseClient) {
+                alert('ยังเชื่อม Supabase ไม่ได้ กรุณาตรวจอินเทอร์เน็ตแล้วลองใหม่');
+                return false;
+            }
+
+            var cleanBeer = normalizeBeer(beer);
+            var result = await supabaseClient
+                .from('beers')
+                .upsert([cleanBeer], { onConflict: 'id' });
+
+            if (result.error) {
+                console.error(result.error);
+                alert('บันทึกข้อมูลไป Supabase ไม่สำเร็จ: ' + result.error.message);
+                return false;
+            }
+
+            return true;
+        }
+
+        async function upsertManyBeersToSupabase(records) {
+            if (!records || records.length === 0) { return true; }
+            if (!supabaseClient) {
+                alert('ยังเชื่อม Supabase ไม่ได้ กรุณาตรวจอินเทอร์เน็ตแล้วลองใหม่');
+                return false;
+            }
+
+            var cleanRecords = records.map(normalizeBeer);
+            var result = await supabaseClient
+                .from('beers')
+                .upsert(cleanRecords, { onConflict: 'id' });
+
+            if (result.error) {
+                console.error(result.error);
+                alert('นำเข้าข้อมูลไป Supabase ไม่สำเร็จ: ' + result.error.message);
+                return false;
+            }
+
+            return true;
+        }
+
+        async function deleteBeerFromSupabase(id) {
+            if (!supabaseClient) {
+                alert('ยังเชื่อม Supabase ไม่ได้ กรุณาตรวจอินเทอร์เน็ตแล้วลองใหม่');
+                return false;
+            }
+
+            var result = await supabaseClient
+                .from('beers')
+                .delete()
+                .eq('id', id);
+
+            if (result.error) {
+                console.error(result.error);
+                alert('ลบข้อมูลจาก Supabase ไม่สำเร็จ: ' + result.error.message);
+                return false;
+            }
+
+            return true;
+        }
+
+        async function deleteAllBeersFromSupabase() {
+            if (!supabaseClient) {
+                alert('ยังเชื่อม Supabase ไม่ได้ กรุณาตรวจอินเทอร์เน็ตแล้วลองใหม่');
+                return false;
+            }
+
+            var result = await supabaseClient
+                .from('beers')
+                .delete()
+                .neq('id', '');
+
+            if (result.error) {
+                console.error(result.error);
+                alert('ล้างข้อมูลจาก Supabase ไม่สำเร็จ: ' + result.error.message);
+                return false;
+            }
+
+            return true;
+        }
+
+        async function initializeCloudData() {
+            try {
+                var cloudBeers = await loadFromSupabase();
+
+                if (cloudBeers.length > 0) {
+                    beers = cloudBeers;
+                    saveToLocalStorage();
+                    return;
+                }
+
+                // ถ้า Cloud ยังว่าง ให้ย้ายข้อมูลเดิมจาก localStorage ขึ้น Supabase อัตโนมัติ
+                var localBeers = loadLocalMigrationData();
+                if (localBeers.length > 0) {
+                    var migrated = await upsertManyBeersToSupabase(localBeers);
+                    beers = localBeers;
+                    saveToLocalStorage();
+                    if (migrated) {
+                        console.log('Migrated local data to Supabase:', localBeers.length);
+                    }
+                    return;
+                }
+
+                // ถ้าไม่มีข้อมูลเดิมเลย ให้ใส่ข้อมูลตัวอย่างเหมือนเวอร์ชันเดิม
+                beers = defaultBeers.map(normalizeBeer);
+                await upsertManyBeersToSupabase(beers);
+                saveToLocalStorage();
+            } catch (err) {
+                console.error('Supabase load failed:', err);
+
+                var fallbackBeers = loadLocalMigrationData();
+                beers = fallbackBeers.length > 0 ? fallbackBeers : defaultBeers.map(normalizeBeer);
+                alert('เชื่อมต่อ Supabase ไม่สำเร็จ ระบบจะแสดงข้อมูลสำรองในเครื่องก่อน กรุณาตรวจ URL, Key, RLS Policy หรืออินเทอร์เน็ต');
+            }
+        }
+
+        // --- สำรองข้อมูลเป็นไฟล์ JSON ให้ดาวน์โหลด ---
+        function exportData() {
+            if (beers.length === 0) {
+                alert("ยังไม่มีข้อมูลให้สำรองครับ");
+                return;
+            }
+            var dataStr = JSON.stringify(beers, null, 2);
+            var blob = new Blob([dataStr], { type: 'application/json' });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = 'beer-diary-backup-' + getFormattedDateString(new Date()) + '.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // --- นำเข้าข้อมูลจากไฟล์ JSON ที่สำรองไว้ ---
+        function importData(event) {
+            var file = event.target.files[0];
+            if (!file) return;
+
+            var reader = new FileReader();
+            reader.onload = async function(e) {
+                try {
+                    var imported = JSON.parse(e.target.result);
+                    if (!Array.isArray(imported)) { throw new Error('invalid format'); }
+
+                    var cleanImported = imported.map(normalizeBeer);
+                    var existingIds = beers.map(function(b) { return b.id; });
+                    var newOnes = cleanImported.filter(function(b) {
+                        return b && b.id && existingIds.indexOf(b.id) === -1;
+                    });
+
+                    var proceed = confirm("พบข้อมูล " + imported.length + " รายการในไฟล์ จะนำเข้าเพิ่ม " + newOnes.length + " รายการใหม่ไปยัง Supabase (รายการที่ซ้ำ id เดิมจะถูกข้าม) ดำเนินการต่อหรือไม่?");
+                    if (proceed) {
+                        var ok = await upsertManyBeersToSupabase(newOnes);
+                        if (!ok) { return; }
+
+                        beers = beers.concat(newOnes);
+                        saveToLocalStorage();
+                        refreshAllViews();
+                        alert("นำเข้าข้อมูลเรียบร้อยแล้ว: เพิ่ม " + newOnes.length + " รายการ");
+                    }
+                } catch (err) {
+                    console.error(err);
+                    alert("ไฟล์ไม่ถูกต้อง กรุณาเลือกไฟล์สำรองข้อมูล JSON ที่ส่งออกจากระบบนี้เท่านั้น");
+                }
+                event.target.value = '';
+            };
+            reader.readAsText(file);
+        }
+
+        // --- ล้างข้อมูลทั้งหมดอย่างถาวร (มีการยืนยัน 2 ขั้นตอน) ---
+        async function resetAllData() {
+            if (beers.length === 0) {
+                alert("ไม่มีข้อมูลอยู่ในระบบอยู่แล้วครับ");
+                return;
+            }
+            if (confirm("ต้องการล้างข้อมูลบันทึกเบียร์ทั้งหมด (" + beers.length + " รายการ) จาก Supabase อย่างถาวรหรือไม่? แนะนำให้กด \"สำรองข้อมูล\" ก่อนทุกครั้ง")) {
+                if (confirm("ยืนยันอีกครั้ง: การลบนี้จะลบจาก Cloud และไม่สามารถย้อนกลับได้")) {
+                    var ok = await deleteAllBeersFromSupabase();
+                    if (!ok) { return; }
+
+                    beers = [];
+                    saveToLocalStorage();
+                    refreshAllViews();
+                    alert("ล้างข้อมูลทั้งหมดจาก Supabase เรียบร้อยแล้ว");
+                }
+            }
+        }
+
+        // จัดฟอร์แมตรูปแบบ YYYY-MM-DD
+        function getFormattedDateString(dateObj) {
+            var year = dateObj.getFullYear();
+            var month = String(dateObj.getMonth() + 1).padStart(2, '0');
+            var day = String(dateObj.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        // ฟังก์ชันสลับแท็บ
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(function(tab) {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('nav button').forEach(function(btn) {
+                btn.className = 'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all text-zinc-400 hover:text-amber-400';
+            });
+            
+            document.getElementById('tab-' + tabId).classList.add('active');
+            document.getElementById('nav-' + tabId).className = 'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all text-amber-400 bg-zinc-850';
+
+            if (tabId === 'stats') {
+                calculateStats();
+            } else if (tabId === 'calendar') {
+                renderCalendar();
+                showSelectedDayDetails();
+            }
+        }
+
+        // --- ระบบอัปโหลดรูปภาพจำลอง ---
+        function previewImage(event) {
+            var file = event.target.files[0];
+            if (file) {
+                var reader = new FileReader();
+                reader.onload = function(e) {
+                    var img = new Image();
+                    img.onload = function() {
+                        var canvas = document.createElement('canvas');
+                        var max_width = 1100; // ย่อรูปขนาดที่เหมาะสมกับเว็บไม่เปลืองแรม แต่คมชัดพอสำหรับการ์ดและพรีวิวขนาดใหญ่
+                        var width = img.width;
+                        var height = img.height;
+                        if (width > max_width) {
+                            height = Math.round((height * max_width) / width);
+                            width = max_width;
+                        }
+                        canvas.width = width;
+                        canvas.height = height;
+                        var ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+                        
+                        selectedImageBase64 = canvas.toDataURL('image/jpeg', 0.85);
+                        document.getElementById('imagePreview').src = selectedImageBase64;
+                        document.getElementById('imagePreview').classList.remove('hidden');
+                        document.getElementById('uploadPlaceholder').classList.add('hidden');
+                        document.getElementById('removeImgBtn').classList.remove('hidden');
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function clearImagePreview(event) {
+            if (event) {
+                event.stopPropagation();
+                event.preventDefault();
+            }
+            selectedImageBase64 = "";
+            document.getElementById('beerImageInput').value = "";
+            document.getElementById('imagePreview').src = "";
+            document.getElementById('imagePreview').classList.add('hidden');
+            document.getElementById('uploadPlaceholder').classList.remove('hidden');
+            document.getElementById('removeImgBtn').classList.add('hidden');
+        }
+
+        // --- ระบบควบคุมดาว Rating ---
+        var currentRating = 0;
+        function setRating(rating) {
+            currentRating = rating;
+            document.getElementById('beerRating').value = rating;
+            var stars = document.querySelectorAll('#ratingStars button');
+            stars.forEach(function(star, index) {
+                if (index < rating) {
+                    star.className = 'text-3xl text-yellow-400 transition-colors';
+                } else {
+                    star.className = 'text-3xl text-zinc-700 hover:text-amber-400 transition-colors';
+                }
+            });
+
+            if (!rating || rating <= 0) {
+                document.getElementById('ratingValueDisplay').innerText = 'ยังไม่ให้คะแนน';
+                return;
+            }
+
+            var labels = ['ไม่ชอบเลย', 'พอใช้ได้', 'ดีตามมาตรฐาน', 'ชอบมากประทับใจ', 'แก้วนี้เด็ดขาด ต้องดื่มซ้ำ!'];
+            document.getElementById('ratingValueDisplay').innerText = rating + ' ดาว - ' + labels[rating - 1];
+        }
+
+        // --- บันทึกข้อมูลเบียร์ ---
+        async function saveBeerRecord(event) {
+            event.preventDefault();
+
+            var name = document.getElementById('beerName').value.trim() || 'รอกลับมาแก้ไข';
+            var brewery = document.getElementById('brewery').value || 'ไม่ระบุโรงผลิต';
+            var style = document.getElementById('beerStyle').value;
+            var abv = document.getElementById('abv').value || '-';
+            var price = parseInt(document.getElementById('beerPrice').value) || 0;
+            var date = document.getElementById('beerDate').value;
+            var location = document.getElementById('location').value || '-';
+            var rating = parseInt(document.getElementById('beerRating').value) || 0;
+            var notes = document.getElementById('tastingNotes').value || "";
+
+            var checkedProfiles = [];
+            document.querySelectorAll('input[name="profile"]:checked').forEach(function(checkbox) {
+                checkedProfiles.push(checkbox.value);
+            });
+
+            // อนุญาตให้บันทึกเป็นร่างได้ แม้ยังไม่ได้ให้คะแนน
+
+            if (editingRecordId) {
+                // --- โหมดแก้ไข: อัปเดตบันทึกเดิมทั้งใน Supabase และหน้าจอ ---
+                var idx = beers.findIndex(function(b) { return b.id === editingRecordId; });
+                if (idx !== -1) {
+                    var updatedBeer = normalizeBeer({
+                        id: editingRecordId,
+                        name: name,
+                        brewery: brewery,
+                        style: style,
+                        abv: abv,
+                        price: price,
+                        date: date,
+                        location: location,
+                        rating: rating,
+                        profiles: checkedProfiles,
+                        notes: notes,
+                        image: selectedImageBase64
+                    });
+
+                    var editOk = await upsertBeerToSupabase(updatedBeer);
+                    if (!editOk) { return; }
+
+                    beers[idx] = updatedBeer;
+                    saveToLocalStorage();
+                }
+
+                alert("อัปเดตบันทึกบน Supabase เรียบร้อยแล้ว!");
+                cancelEditMode();
+            } else {
+                // --- โหมดเพิ่มใหม่: เพิ่มลง Supabase ก่อน แล้วค่อยอัปเดตหน้าจอ ---
+                var newBeer = normalizeBeer({
+                    id: "BEER_" + new Date().getTime(),
+                    name: name,
+                    brewery: brewery,
+                    style: style,
+                    abv: abv,
+                    price: price,
+                    date: date,
+                    location: location,
+                    rating: rating,
+                    profiles: checkedProfiles,
+                    notes: notes,
+                    image: selectedImageBase64
+                });
+
+                var addOk = await upsertBeerToSupabase(newBeer);
+                if (!addOk) { return; }
+
+                beers.unshift(newBeer);
+                saveToLocalStorage();
+                alert("บันทึกไว้ก่อนเรียบร้อยแล้ว สามารถกลับมาแก้ไขรายละเอียดทีหลังได้ครับ");
+
+                document.getElementById('beerForm').reset();
+                clearImagePreview();
+                setRating(0);
+                document.getElementById('ratingValueDisplay').innerText = "ยังไม่ให้คะแนน";
+                document.getElementById('beerDate').value = getFormattedDateString(new Date());
+            }
+
+            // สลับกลับแท็บรายการหลัก
+            switchTab('journal');
+            refreshAllViews();
+        }
+
+        // --- เข้าสู่โหมดแก้ไขบันทึกที่มีอยู่แล้ว ---
+        function openEditForm(beerId) {
+            var beer = beers.find(function(b) { return b.id === beerId; });
+            if (!beer) return;
+
+            editingRecordId = beerId;
+            closeModal();
+
+            document.getElementById('beerName').value = beer.name;
+            document.getElementById('brewery').value = (beer.brewery === 'ไม่ระบุโรงผลิต') ? '' : beer.brewery;
+            document.getElementById('beerStyle').value = beer.style;
+            document.getElementById('abv').value = (beer.abv && beer.abv !== '-') ? beer.abv : '';
+            document.getElementById('beerPrice').value = beer.price;
+            document.getElementById('beerDate').value = beer.date;
+            document.getElementById('location').value = (beer.location === '-') ? '' : beer.location;
+            document.getElementById('tastingNotes').value = beer.notes || '';
+
+            setRating(beer.rating || 0);
+
+            document.querySelectorAll('input[name="profile"]').forEach(function(checkbox) {
+                checkbox.checked = beer.profiles && beer.profiles.indexOf(checkbox.value) !== -1;
+            });
+
+            if (beer.image) {
+                selectedImageBase64 = beer.image;
+                document.getElementById('imagePreview').src = beer.image;
+                document.getElementById('imagePreview').classList.remove('hidden');
+                document.getElementById('uploadPlaceholder').classList.add('hidden');
+                document.getElementById('removeImgBtn').classList.remove('hidden');
+            } else {
+                clearImagePreview();
+            }
+
+            document.getElementById('addFormTitle').innerText = 'แก้ไขบันทึกเบียร์';
+            document.getElementById('addFormSubtitle').innerText = 'กำลังแก้ไข: ' + beer.name;
+            document.getElementById('addFormIcon').className = 'fa-solid fa-pen';
+            document.getElementById('cancelEditBtn').classList.remove('hidden');
+            document.getElementById('submitBtnText').innerText = 'บันทึกการแก้ไข';
+
+            switchTab('add');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // --- ยกเลิกโหมดแก้ไข กลับสู่โหมดเพิ่มใหม่ ---
+        function cancelEditMode() {
+            editingRecordId = null;
+            document.getElementById('beerForm').reset();
+            clearImagePreview();
+            setRating(0);
+            document.getElementById('ratingValueDisplay').innerText = 'ยังไม่ให้คะแนน';
+            document.getElementById('beerDate').value = getFormattedDateString(new Date());
+
+            document.getElementById('addFormTitle').innerText = 'บันทึกเบียร์แก้วใหม่';
+            document.getElementById('addFormSubtitle').innerText = 'ใส่รายละเอียดเบียร์ รสชาติ และงบค่าใช้จ่ายของคุณ';
+            document.getElementById('addFormIcon').className = 'fa-solid fa-plus';
+            document.getElementById('cancelEditBtn').classList.add('hidden');
+            document.getElementById('submitBtnText').innerText = 'บันทึกไว้ก่อน / กลับมาแก้ทีหลัง';
+        }
+
+        // --- แสดงผลลิสต์การ์ด / แกลอรี่ (หน้าบันทึกทั้งหมด) ---
+        function escapeHtml(value) {
+            return String(value || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function initJournalViewControls() {
+            var modeSelect = document.getElementById('journalViewMode');
+            var sizeSelect = document.getElementById('journalPageSize');
+            if (modeSelect) { modeSelect.value = journalViewMode; }
+            if (sizeSelect) { sizeSelect.value = journalPageSize; }
+        }
+
+        function updateJournalViewMode(mode) {
+            journalViewMode = mode || 'card';
+            localStorage.setItem('beer_diary_journal_view_mode', journalViewMode);
+            journalCurrentPage = 1;
+            filterBeers();
+        }
+
+        function updateJournalPageSize(size) {
+            journalPageSize = size || 'all';
+            localStorage.setItem('beer_diary_journal_page_size', journalPageSize);
+            journalCurrentPage = 1;
+            filterBeers();
+        }
+
+        function changeJournalPage(direction) {
+            journalCurrentPage += direction;
+            filterBeers(true);
+            var journalTop = document.getElementById('tab-journal');
+            if (journalTop) {
+                journalTop.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }
+
+        function getJournalGridClass() {
+            if (journalViewMode === 'gallery') {
+                if (journalPageSize === '6') {
+                    return 'grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4';
+                }
+                if (journalPageSize === '9') {
+                    return 'grid grid-cols-3 gap-3 sm:gap-4';
+                }
+                if (journalPageSize === '12') {
+                    return 'grid grid-cols-3 sm:grid-cols-4 gap-3 sm:gap-4';
+                }
+                if (journalPageSize === '18' || journalPageSize === '24') {
+                    return 'grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2.5 sm:gap-3';
+                }
+                return 'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4';
+            }
+
+            if (journalViewMode === 'compact') {
+                if (journalPageSize === '9') {
+                    return 'grid grid-cols-2 sm:grid-cols-3 gap-4';
+                }
+                if (journalPageSize === '12' || journalPageSize === '18' || journalPageSize === '24') {
+                    return 'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4';
+                }
+                return 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4';
+            }
+
+            return 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6';
+        }
+
+        function updateJournalPagination(totalItems, totalPages, startIndex, endIndex) {
+            var info = document.getElementById('journalPageInfo');
+            var prev = document.getElementById('journalPrevBtn');
+            var next = document.getElementById('journalNextBtn');
+
+            if (!info || !prev || !next) { return; }
+
+            if (totalItems === 0) {
+                info.innerText = '0 รายการ';
+                prev.disabled = true;
+                next.disabled = true;
+                return;
+            }
+
+            var showingText = (startIndex + 1) + '-' + endIndex + ' จาก ' + totalItems;
+            if (journalPageSize === 'all') {
+                info.innerText = 'ทั้งหมด ' + totalItems + ' รายการ';
+            } else {
+                info.innerText = 'หน้า ' + journalCurrentPage + '/' + totalPages + ' · ' + showingText;
+            }
+
+            prev.disabled = journalCurrentPage <= 1 || journalPageSize === 'all';
+            next.disabled = journalCurrentPage >= totalPages || journalPageSize === 'all';
+        }
+
+        function createPlaceholderImageBlock(extraClass) {
+            return '<div class="' + extraClass + ' gallery-cell-placeholder"><svg class="w-12 h-12 opacity-60" viewBox="0 0 100 100"><use href="#icon-beer-premium"></use></svg></div>';
+        }
+
+        function buildCardView(beer, starSection, dateShow) {
+            var imageSection = '<div class="h-60 bg-zinc-950 flex items-center justify-center text-zinc-700"><svg class="w-16 h-16 opacity-60" viewBox="0 0 100 100"><use href="#icon-beer-premium"></use></svg></div>';
+            if (beer.image) {
+                imageSection = '<div class="beer-img-frame"><img class="beer-card-img" src="' + beer.image + '" alt="Beer label"></div>';
+            }
+
+            return imageSection +
+                '<div class="p-5 space-y-3 flex-grow flex flex-col justify-between">' +
+                    '<div class="space-y-1.5">' +
+                        '<div class="flex justify-between items-center">' +
+                            '<span class="text-[10px] font-bold px-2.5 py-1 bg-amber-500/10 text-amber-400 rounded-lg">' + escapeHtml(beer.style) + '</span>' +
+                            '<span class="text-[11px] text-zinc-500">' + escapeHtml(dateShow) + '</span>' +
+                        '</div>' +
+                        '<h3 class="font-title font-bold text-lg text-zinc-100 leading-tight truncate">' + escapeHtml(beer.name) + '</h3>' +
+                        '<p class="text-xs text-zinc-400 truncate">โรงกลั่น: ' + escapeHtml(beer.brewery) + '</p>' +
+                    '</div>' +
+                    '<div class="pt-2 border-t border-zinc-800/60 flex items-center justify-between">' +
+                        '<div class="flex items-center gap-1.5"><div class="flex gap-0.5">' + starSection + '</div></div>' +
+                        '<span class="font-title font-bold text-emerald-400 text-base">' + escapeHtml(beer.price) + ' ฿</span>' +
+                    '</div>' +
+                '</div>';
+        }
+
+        function buildGalleryView(beer, dateShow) {
+            var imageHtml = beer.image
+                ? '<img class="gallery-cell-img" src="' + beer.image + '" alt="Beer label">'
+                : createPlaceholderImageBlock('');
+
+            return imageHtml +
+                '<div class="gallery-overlay opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">' +
+                    '<div class="flex justify-between items-center gap-2 mb-1">' +
+                        '<span class="text-[9px] font-bold px-2 py-0.5 bg-amber-500 text-zinc-950 rounded-full truncate max-w-[70%]">' + escapeHtml(beer.style) + '</span>' +
+                        '<span class="text-[10px] text-zinc-300">' + escapeHtml(dateShow) + '</span>' +
+                    '</div>' +
+                    '<div class="font-title font-bold text-xs sm:text-sm text-white truncate">' + escapeHtml(beer.name) + '</div>' +
+                '</div>';
+        }
+
+        function buildCompactGalleryView(beer, starSection, dateShow) {
+            var imageHtml = beer.image
+                ? '<div class="aspect-square bg-zinc-950 flex items-center justify-center"><img class="gallery-cell-img" src="' + beer.image + '" alt="Beer label"></div>'
+                : '<div class="aspect-square bg-zinc-950 flex items-center justify-center text-zinc-700"><svg class="w-12 h-12 opacity-60" viewBox="0 0 100 100"><use href="#icon-beer-premium"></use></svg></div>';
+
+            return imageHtml +
+                '<div class="p-3 space-y-2">' +
+                    '<div class="flex justify-between items-center gap-2">' +
+                        '<span class="text-[9px] font-bold px-2 py-0.5 bg-amber-500/10 text-amber-400 rounded-full truncate">' + escapeHtml(beer.style) + '</span>' +
+                        '<span class="text-[10px] text-zinc-500">' + escapeHtml(dateShow) + '</span>' +
+                    '</div>' +
+                    '<h3 class="font-title font-bold text-sm text-zinc-100 truncate">' + escapeHtml(beer.name) + '</h3>' +
+                    '<div class="flex justify-between items-center gap-2">' +
+                        '<div class="flex gap-0.5">' + starSection + '</div>' +
+                        '<span class="text-xs font-bold text-emerald-400">' + escapeHtml(beer.price) + ' ฿</span>' +
+                    '</div>' +
+                '</div>';
+        }
+
+        function renderBeerList(filteredBeers) {
+            var gridContainer = document.getElementById('beerGrid');
+            var targetBeers = filteredBeers || beers;
+
+            gridContainer.innerHTML = '';
+            gridContainer.className = getJournalGridClass();
+
+            if (targetBeers.length === 0) {
+                document.getElementById('emptyState').classList.remove('hidden');
+                updateJournalPagination(0, 1, 0, 0);
+                return;
+            } else {
+                document.getElementById('emptyState').classList.add('hidden');
+            }
+
+            var totalItems = targetBeers.length;
+            var pageSize = journalPageSize === 'all' ? totalItems : parseInt(journalPageSize, 10);
+            if (!pageSize || pageSize < 1) { pageSize = totalItems; }
+
+            var totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+            if (journalCurrentPage > totalPages) { journalCurrentPage = totalPages; }
+            if (journalCurrentPage < 1) { journalCurrentPage = 1; }
+
+            var startIndex = journalPageSize === 'all' ? 0 : (journalCurrentPage - 1) * pageSize;
+            var endIndex = journalPageSize === 'all' ? totalItems : Math.min(startIndex + pageSize, totalItems);
+            var pageBeers = targetBeers.slice(startIndex, endIndex);
+
+            updateJournalPagination(totalItems, totalPages, startIndex, endIndex);
+
+            pageBeers.forEach(function(beer) {
+                var card = document.createElement('div');
+
+                if (journalViewMode === 'gallery') {
+                    card.className = 'group relative bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden shadow-lg hover:border-purple-400/60 hover:shadow-2xl transition-all duration-300 cursor-pointer aspect-square';
+                } else if (journalViewMode === 'compact') {
+                    card.className = 'bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden shadow-lg hover:border-zinc-700 hover:shadow-2xl transition-all duration-300 flex flex-col cursor-pointer';
+                } else {
+                    card.className = 'bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden shadow-lg hover:border-zinc-700 hover:shadow-2xl transition-all duration-300 flex flex-col justify-between cursor-pointer';
+                }
+
+                card.onclick = function() { openModal(beer.id); };
+                card.tabIndex = 0;
+                card.setAttribute('role', 'button');
+                card.setAttribute('aria-label', 'ดูรายละเอียด ' + beer.name);
+                card.onkeydown = function(e) {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        openModal(beer.id);
+                    }
+                };
+
+                var starSection = '';
+                for (var i = 1; i <= 5; i++) {
+                    if (i <= beer.rating) {
+                        starSection += '<i class="fa-solid fa-star text-yellow-400 text-xs"></i>';
+                    } else {
+                        starSection += '<i class="fa-solid fa-star text-zinc-700 text-xs"></i>';
+                    }
+                }
+
+                var dateShow = new Date(beer.date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' });
+
+                if (journalViewMode === 'gallery') {
+                    card.innerHTML = buildGalleryView(beer, dateShow);
+                } else if (journalViewMode === 'compact') {
+                    card.innerHTML = buildCompactGalleryView(beer, starSection, dateShow);
+                } else {
+                    card.innerHTML = buildCardView(beer, starSection, dateShow);
+                }
+
+                gridContainer.appendChild(card);
+            });
+        }
+
+        // ค้นหาและตัวคัดเลือกกรอง
+        function filterBeers(preservePage) {
+            var query = document.getElementById('searchInput').value.toLowerCase();
+            var style = document.getElementById('styleFilter').value;
+            var sortBy = document.getElementById('sortFilter').value;
+            var filterKey = query + '|' + style + '|' + sortBy + '|' + journalViewMode + '|' + journalPageSize;
+
+            if (!preservePage && filterKey !== lastJournalFilterKey) {
+                journalCurrentPage = 1;
+            }
+            lastJournalFilterKey = filterKey;
+
+            var filtered = beers.filter(function(beer) {
+                var matchesSearch = beer.name.toLowerCase().includes(query) ||
+                                    beer.brewery.toLowerCase().includes(query) ||
+                                    beer.location.toLowerCase().includes(query);
+                var matchesStyle = (style === 'All') || (beer.style === style);
+                return matchesSearch && matchesStyle;
+            });
+
+            filtered = sortBeerList(filtered, sortBy);
+            renderBeerList(filtered);
+        }
+
+        // เรียงลำดับรายการเบียร์ตามเงื่อนไขที่เลือก
+        function sortBeerList(list, sortBy) {
+            var sorted = list.slice();
+            switch (sortBy) {
+                case 'oldest':
+                    sorted.sort(function(a, b) { return new Date(a.date) - new Date(b.date); });
+                    break;
+                case 'price-desc':
+                    sorted.sort(function(a, b) { return b.price - a.price; });
+                    break;
+                case 'price-asc':
+                    sorted.sort(function(a, b) { return a.price - b.price; });
+                    break;
+                case 'rating-desc':
+                    sorted.sort(function(a, b) { return b.rating - a.rating; });
+                    break;
+                default: // newest
+                    sorted.sort(function(a, b) { return new Date(b.date) - new Date(a.date); });
+            }
+            return sorted;
+        }
+
+        // --- ระบบวิจัยสร้าง ปฏิทิน รายเดือนอเนกประสงค์ ---
+        var thaiMonths = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+        
+        function renderCalendar() {
+            var grid = document.getElementById('calendarGrid');
+            grid.innerHTML = '';
+
+            var year = currentDate.getFullYear();
+            var month = currentDate.getMonth();
+
+            // เปลี่ยนหัวแสดงเดือน
+            document.getElementById('currentMonthYear').innerText = thaiMonths[month] + " " + (year + 543);
+
+            // คำนวณวันแรกและจำนวนวันทั้งหมดของเดือนนี้
+            var firstDayIndex = new Date(year, month, 1).getDay();
+            var totalDays = new Date(year, month + 1, 0).getDate();
+            var prevTotalDays = new Date(year, month, 0).getDate();
+
+            // สร้างส่วนวันหลังของเดือนที่ผ่านมา (ก่อนหน้าวันแรก)
+            for (var x = firstDayIndex; x > 0; x--) {
+                var dayNum = prevTotalDays - x + 1;
+                var dummyDay = document.createElement('div');
+                dummyDay.className = 'calendar-day bg-zinc-950/20 text-zinc-800 border border-zinc-900/10 rounded-xl p-1 flex flex-col justify-between opacity-30';
+                dummyDay.innerHTML = `<span class="text-xs text-zinc-700 font-bold">${dayNum}</span>`;
+                grid.appendChild(dummyDay);
+            }
+
+            // สร้างบล็อคแต่ละวันของเดือนปัจจุบัน
+            for (var i = 1; i <= totalDays; i++) {
+                var dayEl = document.createElement('div');
+                var dayString = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+                
+                // ค้นหาประวัติว่าวันนั้นมีเบียร์ที่ดื่มไหม
+                var dayBeers = beers.filter(function(b) { return b.date === dayString; });
+                var totalSpentThisDay = dayBeers.reduce(function(sum, b) { return sum + b.price; }, 0);
+
+                var isSelected = (dayString === selectedDateString);
+                var isToday = (dayString === getFormattedDateString(new Date()));
+
+                var borderClass = isSelected ? 'border-amber-500 bg-amber-500/10' : 'border-zinc-800 bg-zinc-950';
+                if (isToday && !isSelected) { borderClass = 'border-zinc-500 bg-zinc-900'; }
+
+                dayEl.className = 'calendar-day border rounded-xl p-1.5 flex flex-col justify-between cursor-pointer hover:border-amber-500 transition-all ' + borderClass;
+                dayEl.dataset.date = dayString;
+                dayEl.onclick = function() { selectCalendarDay(this.dataset.date); };
+                dayEl.tabIndex = 0;
+                dayEl.setAttribute('role', 'button');
+                dayEl.setAttribute('aria-label', 'วันที่ ' + i + ' ' + thaiMonths[month] + (dayBeers.length > 0 ? ', มีบันทึก ' + dayBeers.length + ' รายการ' : ''));
+                dayEl.onkeydown = function(e) {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        selectCalendarDay(this.dataset.date);
+                    }
+                };
+
+                // สัญลักษณ์ประดับบอกว่าดื่มไปกี่ตัว
+                var indicator = '';
+                if (dayBeers.length > 0) {
+                    indicator = 
+                        '<div class="flex flex-col items-center gap-0.5 mt-1">' +
+                            '<i class="fa-solid fa-beer-mug-empty text-amber-500 text-sm"></i>' +
+                            '<span class="text-[9px] font-bold text-emerald-400 font-title leading-none">' + totalSpentThisDay + ' ฿</span>' +
+                        '</div>';
+                }
+
+                dayEl.innerHTML = 
+                    '<div class="flex justify-between items-center w-full">' +
+                        '<span class="text-xs font-bold ' + (isToday ? 'text-amber-400' : 'text-zinc-400') + '">' + i + '</span>' +
+                        (dayBeers.length > 1 ? '<span class="text-[8px] bg-amber-500/25 text-amber-400 px-1 py-0.2 rounded-md font-bold">x' + dayBeers.length + '</span>' : '') +
+                    '</div>' + indicator;
+
+                grid.appendChild(dayEl);
+            }
+        }
+
+        // --- กระโดดกลับมาที่วันนี้ในปฏิทินทันที ---
+        function goToToday() {
+            currentDate = new Date();
+            selectedDateString = getFormattedDateString(new Date());
+            renderCalendar();
+            showSelectedDayDetails();
+        }
+
+        function selectCalendarDay(dateStr) {
+            selectedDateString = dateStr;
+            renderCalendar();
+            showSelectedDayDetails();
+        }
+
+        // นำรันเปลี่ยนเดือนของปฏิทิน
+        function navigateMonth(direction) {
+            currentDate.setMonth(currentDate.getMonth() + direction);
+            renderCalendar();
+        }
+
+        // แสดงรายละเอียดเบียร์ตามวันทีเลือกฝั่งขวา
+        function showSelectedDayDetails() {
+            var selectedDate = new Date(selectedDateString);
+            var textDisplay = selectedDate.toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' });
+            document.getElementById('selectedDateDisplay').innerText = textDisplay;
+
+            var dayBeers = beers.filter(function(b) { return b.date === selectedDateString; });
+            var totalSpent = dayBeers.reduce(function(sum, b) { return sum + b.price; }, 0);
+            
+            document.getElementById('dayTotalCost').innerText = totalSpent.toLocaleString('th-TH') + " ฿";
+
+            var dayListContainer = document.getElementById('dayBeerList');
+            dayListContainer.innerHTML = '';
+
+            if (dayBeers.length === 0) {
+                dayListContainer.innerHTML = '<div class="text-center py-10 text-zinc-600 text-xs"><i class="fa-solid fa-beer-mug-empty text-2xl block mb-2 opacity-40"></i>ไม่มีประวัติการบันทึกการดื่มในวันนี้</div>';
+                return;
+            }
+
+            dayBeers.forEach(function(beer) {
+                var row = document.createElement('div');
+                row.className = 'bg-zinc-950 p-3 rounded-xl border border-zinc-800/80 flex items-center justify-between gap-3 hover:border-zinc-700 cursor-pointer';
+                row.onclick = function() { openModal(beer.id); };
+
+                var starSection = '';
+                for (var i = 1; i <= 5; i++) {
+                    starSection += `<i class="fa-solid fa-star ${i <= beer.rating ? 'text-yellow-400' : 'text-zinc-800'} text-[8px]"></i>`;
+                }
+
+                row.innerHTML = 
+                    '<div class="flex items-center gap-3 truncate min-w-0">' +
+                        '<div class="w-9 h-9 bg-amber-500/10 rounded-lg flex items-center justify-center text-amber-500 flex-shrink-0 text-xs"><i class="fa-solid fa-beer-mug-empty"></i></div>' +
+                        '<div class="truncate min-w-0">' +
+                            '<h4 class="text-xs font-semibold text-zinc-100 truncate leading-tight">' + beer.name + '</h4>' +
+                            '<div class="flex items-center gap-1.5 mt-0.5">' +
+                                '<span class="text-[9px] text-zinc-500">' + beer.style + '</span>' +
+                                '<span class="text-[8px] text-zinc-700">•</span>' +
+                                '<div class="flex gap-0.5">' + starSection + '</div>' +
+                            '</div>' +
+                        '</div>' +
+                    '</div>' +
+                    '<span class="text-xs font-title font-bold text-emerald-400 flex-shrink-0">' + beer.price + ' ฿</span>';
+
+                dayListContainer.appendChild(row);
+            });
+        }
+
+        function prepareAddForSelectedDate() {
+            if (editingRecordId) { cancelEditMode(); }
+            document.getElementById('beerDate').value = selectedDateString;
+            switchTab('add');
+        }
+
+        // --- ระบบเปิดดูรายละเอียดเชิงลึก (Detail Modal) ---
+        function openModal(beerId) {
+            var beer = beers.find(function(b) { return b.id === beerId; });
+            if (!beer) return;
+
+            var modal = document.getElementById('recordModal');
+            
+            if (beer.image) {
+                document.getElementById('modalImage').src = beer.image;
+                document.getElementById('modalImage').classList.remove('hidden');
+                document.getElementById('modalImagePlaceholder').classList.add('hidden');
+            } else {
+                document.getElementById('modalImage').classList.add('hidden');
+                document.getElementById('modalImagePlaceholder').classList.remove('hidden');
+            }
+
+            document.getElementById('modalName').innerText = beer.name;
+            document.getElementById('modalBrewery').innerText = "ผู้ผลิต/โรงกลั่น: " + beer.brewery;
+            document.getElementById('modalStyle').innerText = beer.style;
+            document.getElementById('modalABV').innerText = beer.abv ? beer.abv + "%" : "-";
+            document.getElementById('modalPrice').innerText = beer.price.toLocaleString('th-TH') + " ฿";
+            document.getElementById('modalLocation').innerText = beer.location || "-";
+            document.getElementById('modalNotes').innerText = beer.notes || "ไม่ได้กรอกบันทึกรสชาติเพิ่มเติม";
+            
+            var dateShow = new Date(beer.date).toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' });
+            document.getElementById('modalDate').innerText = dateShow;
+
+            var starDiv = document.getElementById('modalStars');
+            starDiv.innerHTML = '';
+            for (var i = 1; i <= 5; i++) {
+                starDiv.innerHTML += `<i class="fa-solid fa-star ${i <= beer.rating ? 'text-yellow-400' : 'text-zinc-800'}"></i>`;
+            }
+
+            var tagsDiv = document.getElementById('modalTags');
+            tagsDiv.innerHTML = '';
+            if (beer.profiles && beer.profiles.length > 0) {
+                beer.profiles.forEach(function(p) {
+                    tagsDiv.innerHTML += '<span class="text-[10px] bg-zinc-950 text-zinc-300 font-medium px-3 py-1 rounded-lg border border-zinc-800">' + p + '</span>';
+                });
+            } else {
+                tagsDiv.innerHTML = '<span class="text-xs text-zinc-600 italic">ไม่มีข้อมูลแท็ก</span>';
+            }
+
+            document.getElementById('editRecordBtn').onclick = function() { openEditForm(beer.id); };
+            document.getElementById('deleteRecordBtn').onclick = function() { deleteRecord(beer.id); };
+            modal.classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('recordModal').classList.add('hidden');
+        }
+
+        async function deleteRecord(id) {
+            if (confirm("ต้องการลบประวัติเบียร์ตัวนี้ออกถาวรจาก Supabase หรือไม่?")) {
+                var ok = await deleteBeerFromSupabase(id);
+                if (!ok) { return; }
+
+                beers = beers.filter(function(b) { return b.id !== id; });
+                saveToLocalStorage();
+                closeModal();
+                
+                // อัปเดตการแสดงผลใหม่ในหน้าต่างๆ
+                refreshAllViews();
+            }
+        }
+
+        // --- AI OCR อ่านตัวหนังสือบนฉลากผ่าน Supabase Edge Function + Gemini ---
+        function setAiAnalyzeLoading(isLoading, message) {
+            var btn = document.getElementById('aiAnalyzeBtn');
+            var status = document.getElementById('aiAnalyzeStatus');
+
+            if (btn) {
+                btn.disabled = isLoading;
+                if (isLoading) {
+                    btn.classList.add('opacity-60', 'cursor-not-allowed');
+                    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> AI กำลัง OCR ฉลาก...';
+                } else {
+                    btn.classList.remove('opacity-60', 'cursor-not-allowed');
+                    btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> AI OCR อ่านข้อความฉลาก';
+                }
+            }
+
+            if (status && message) {
+                status.innerText = message;
+            }
+        }
+
+        function pickAiText() {
+            for (var i = 0; i < arguments.length; i++) {
+                var value = arguments[i];
+                if (value === undefined || value === null) continue;
+                if (Array.isArray(value)) value = value.join('\n');
+                value = value.toString().trim();
+                if (value) return value;
+            }
+            return '';
+        }
+
+        function resizeImageFileToBase64(file, maxWidth, quality) {
+            maxWidth = maxWidth || 1100;
+            quality = quality || 0.85;
+
+            return new Promise(function(resolve, reject) {
+                var reader = new FileReader();
+
+                reader.onload = function(e) {
+                    var img = new Image();
+
+                    img.onload = function() {
+                        var canvas = document.createElement('canvas');
+                        var width = img.width;
+                        var height = img.height;
+
+                        if (width > maxWidth) {
+                            height = Math.round((height * maxWidth) / width);
+                            width = maxWidth;
+                        }
+
+                        canvas.width = width;
+                        canvas.height = height;
+
+                        var ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+                        resolve(canvas.toDataURL('image/jpeg', quality));
+                    };
+
+                    img.onerror = function() {
+                        reject(new Error('อ่านรูปภาพไม่สำเร็จ'));
+                    };
+
+                    img.src = e.target.result;
+                };
+
+                reader.onerror = function() {
+                    reject(new Error('อ่านไฟล์ไม่สำเร็จ'));
+                };
+
+                reader.readAsDataURL(file);
+            });
+        }
+
+        async function createDraftsFromMultipleImages(event) {
+            var files = Array.from(event.target.files || []);
+            var status = document.getElementById('multiDraftStatus');
+            var btn = document.getElementById('multiDraftBtn');
+
+            if (files.length === 0) { return; }
+
+            if (files.length > 5) {
+                alert('เลือกได้สูงสุด 5 รูปต่อครั้งครับ');
+                event.target.value = '';
+                return;
+            }
+
+            try {
+                if (btn) {
+                    btn.disabled = true;
+                    btn.classList.add('opacity-60', 'cursor-not-allowed');
+                }
+                if (status) {
+                    status.innerText = 'กำลังสร้างรายการร่างจาก ' + files.length + ' รูป...';
+                    status.className = 'text-[11px] text-purple-300 text-center';
+                }
+
+                var today = document.getElementById('beerDate').value || getFormattedDateString(new Date());
+                var now = new Date().getTime();
+                var drafts = [];
+
+                for (var i = 0; i < files.length; i++) {
+                    var imageBase64 = await resizeImageFileToBase64(files[i], 1100, 0.85);
+                    drafts.push(normalizeBeer({
+                        id: 'BEER_DRAFT_' + now + '_' + (i + 1),
+                        name: 'รอกลับมาแก้ไข ' + (i + 1),
+                        brewery: 'ไม่ระบุโรงผลิต',
+                        style: 'Other',
+                        abv: '-',
+                        price: 0,
+                        location: '-',
+                        date: today,
+                        rating: 0,
+                        profiles: [],
+                        notes: 'สร้างเป็นร่างจากรูปหลายรายการ เมื่อ ' + new Date().toLocaleString('th-TH') + '\nค่อยกลับมาแก้ชื่อ ราคา คะแนน และรายละเอียดทีหลัง',
+                        image: imageBase64
+                    }));
+
+                    if (status) {
+                        status.innerText = 'กำลังสร้างรายการร่าง ' + (i + 1) + '/' + files.length + '...';
+                    }
+                }
+
+                var ok = await upsertManyBeersToSupabase(drafts);
+                if (!ok) { return; }
+
+                beers = drafts.concat(beers);
+                saveToLocalStorage();
+                refreshAllViews();
+                switchTab('journal');
+
+                if (status) {
+                    status.innerText = 'สร้างรายการร่างสำเร็จ ' + drafts.length + ' รายการ';
+                    status.className = 'text-[11px] text-emerald-400 text-center';
+                }
+                alert('สร้างรายการร่างจากรูปเรียบร้อยแล้ว ' + drafts.length + ' รายการ');
+            } catch (err) {
+                console.error(err);
+                if (status) {
+                    status.innerText = 'สร้างรายการร่างไม่สำเร็จ: ' + (err.message || 'เกิดข้อผิดพลาด');
+                    status.className = 'text-[11px] text-red-400 text-center';
+                }
+                alert('สร้างรายการร่างไม่สำเร็จ');
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.classList.remove('opacity-60', 'cursor-not-allowed');
+                }
+                event.target.value = '';
+            }
+        }
+
+        async function analyzeLabelWithAI() {
+            if (!selectedImageBase64) {
+                alert('กรุณาอัปโหลดรูปฉลากก่อนครับ');
+                return;
+            }
+
+            if (!SUPABASE_URL || !SUPABASE_KEY) {
+                alert('ยังไม่ได้ตั้งค่า Supabase URL หรือ Key');
+                return;
+            }
+
+            setAiAnalyzeLoading(true, 'กำลังส่งรูปให้ AI OCR อ่านตัวหนังสือบนฉลาก...');
+
+            try {
+                var response = await fetch(SUPABASE_URL + '/functions/v1/analyze-label', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + SUPABASE_KEY,
+                        'apikey': SUPABASE_KEY
+                    },
+                    body: JSON.stringify({
+                        imageBase64: selectedImageBase64
+                    })
+                });
+
+                var result = await response.json().catch(function() { return {}; });
+                console.log('AI OCR result:', result);
+
+                if (!response.ok) {
+                    console.error('AI OCR error:', result);
+                    var detail = result.error || result.message || response.status;
+                    alert('AI OCR อ่านฉลากไม่สำเร็จ: ' + detail);
+                    setAiAnalyzeLoading(false, 'AI OCR ไม่สำเร็จ กรุณาเช็ก Edge Function Logs');
+                    return;
+                }
+
+                var printedText = pickAiText(
+                    result.printed_text,
+                    result.printedText,
+                    result.visible_text,
+                    result.ocr_text,
+                    result.label_text,
+                    result.text,
+                    result.raw_text
+                );
+
+                if (!printedText) {
+                    printedText = JSON.stringify(result, null, 2);
+                }
+
+                var noteBox = document.getElementById('tastingNotes');
+                var stamp = new Date().toLocaleString('th-TH');
+                var aiNote = 'ข้อความบนฉลากจาก AI OCR (' + stamp + '):\n' + printedText;
+                noteBox.value = noteBox.value ? noteBox.value + '\n\n' + aiNote : aiNote;
+
+                setAiAnalyzeLoading(false, 'AI OCR อ่านข้อความและใส่ใน Notes แล้ว');
+                alert('AI OCR อ่านข้อความบนฉลากและใส่ในช่องบันทึกช่วยจำแล้วครับ');
+            } catch (error) {
+                console.error('AI OCR exception:', error);
+                alert('เกิดข้อผิดพลาดตอนเรียก AI OCR กรุณาเช็ก Edge Function และ GEMINI_API_KEY');
+                setAiAnalyzeLoading(false, 'เกิดข้อผิดพลาดตอนเรียก AI OCR');
+            }
+        }
+
+        // --- ระบบประมวลผล สถิติ และการเงิน (Analytics) ---
+        function calculateStats() {
+            if (beers.length === 0) {
+                document.getElementById('stat-total-beers').innerText = "0";
+                document.getElementById('stat-total-cost').innerText = "0";
+                document.getElementById('stat-avg-rating').innerText = "0.0";
+                document.getElementById('stat-favorite-style').innerText = "-";
+                document.getElementById('styleStatsContainer').innerHTML = '<p class="text-xs text-zinc-500 italic">จดประวัติการบันทึกก่อนเพื่อให้เครื่องมือนี้เริ่มประมวลผล</p>';
+                document.getElementById('stat-tags-cloud').innerHTML = '<span class="text-xs text-zinc-500 italic">ไม่มีแท็กคาแรคเตอร์รสชาติ</span>';
+                return;
+            }
+
+            // สรุปสถิติทั่วไป
+            document.getElementById('stat-total-beers').innerText = beers.length;
+
+            var totalCost = beers.reduce(function(sum, beer) { return sum + beer.price; }, 0);
+            document.getElementById('stat-total-cost').innerText = totalCost.toLocaleString('th-TH');
+
+            var totalRating = beers.reduce(function(sum, beer) { return sum + beer.rating; }, 0);
+            var avgRating = (totalRating / beers.length).toFixed(1);
+            document.getElementById('stat-avg-rating').innerText = avgRating;
+
+            // นำยอดสไตล์เบียร์แต่ละประเภทมาจัดเรียงสรุป
+            var styleCounts = {};
+            beers.forEach(function(beer) {
+                styleCounts[beer.style] = (styleCounts[beer.style] || 0) + 1;
+            });
+
+            var favStyle = "-";
+            var maxCount = 0;
+            for (var style in styleCounts) {
+                if (styleCounts[style] > maxCount) {
+                    maxCount = styleCounts[style];
+                    favStyle = style;
+                }
+            }
+            document.getElementById('stat-favorite-style').innerText = favStyle;
+
+            var progressContainer = document.getElementById('styleStatsContainer');
+            progressContainer.innerHTML = '';
+            
+            var sortedStyles = Object.keys(styleCounts).sort(function(a, b) { return styleCounts[b] - styleCounts[a]; });
+
+            sortedStyles.forEach(function(style) {
+                var count = styleCounts[style];
+                var percentage = ((count / beers.length) * 100).toFixed(0);
+                var row = document.createElement('div');
+                row.className = 'space-y-1.5';
+                row.innerHTML = 
+                    '<div class="flex justify-between text-xs text-zinc-300">' +
+                        '<span class="font-semibold">' + style + '</span>' +
+                        '<span class="font-medium text-zinc-500">' + count + ' แก้ว (' + percentage + '%)</span>' +
+                    '</div>' +
+                    '<div class="w-full h-2 bg-zinc-950 rounded-full overflow-hidden">' +
+                        '<div class="bg-amber-500 h-full rounded-full transition-all duration-500" style="width: ' + percentage + '%"></div>' +
+                    '</div>';
+                progressContainer.appendChild(row);
+            });
+
+            // คาแรคเตอร์รสชาติยอดนิยม
+            var tagCounts = {};
+            beers.forEach(function(beer) {
+                if (beer.profiles) {
+                    beer.profiles.forEach(function(tag) { tagCounts[tag] = (tagCounts[tag] || 0) + 1; });
+                }
+            });
+
+            var tagContainer = document.getElementById('stat-tags-cloud');
+            tagContainer.innerHTML = '';
+            var sortedTags = Object.keys(tagCounts).sort(function(a, b) { return tagCounts[b] - tagCounts[a]; });
+
+            if (sortedTags.length > 0) {
+                sortedTags.forEach(function(tag) {
+                    var count = tagCounts[tag];
+                    var tagEl = document.createElement('span');
+                    tagEl.className = 'text-xs bg-amber-500/10 text-amber-400 font-semibold px-3.5 py-1.5 rounded-xl border border-amber-500/10 flex items-center gap-1.5';
+                    tagEl.innerHTML = tag + ' <span class="bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded-md text-[9px] font-bold">' + count + '</span>';
+                    tagContainer.appendChild(tagEl);
+                });
+            } else {
+                tagContainer.innerHTML = '<span class="text-xs text-zinc-500 italic">ไม่มีโปรไฟล์แท็กเพียงพอ</span>';
+            }
+        }
+    </script>
+</body>
+</html>
